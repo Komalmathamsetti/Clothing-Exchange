@@ -3,8 +3,8 @@ const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 exports.registerUser = async(req,res)=>{
     try{
-      const { full_name,email,password,phone,role } = req.body;
-      if(!full_name || !email || !password || !phone || !role){
+      const { full_name,email,password,phone,role,city,state } = req.body;
+      if(!full_name || !email || !password || !phone || !role || !city || !state){
         return res.status(403).json({
             success:false,
             message:"Please fill all the fields required"
@@ -13,8 +13,8 @@ exports.registerUser = async(req,res)=>{
       const existingUser = await pool.query(
         `SELECT * FROM users WHERE email= $1`,[email]
       );
-      if(existingUser.rows.length === 0){
-        res.status(401).json({
+      if(existingUser.rows.length > 0){
+        return res.status(409).json({
             success:false,
             message:"User already exists"
         });
@@ -22,11 +22,11 @@ exports.registerUser = async(req,res)=>{
       const hashedPassword = await bcrypt.hash(password,10);
       const newUser = await pool.query(
         `INSERT INTO users
-        (full_name,email,password,role,phone)
-        VALUES ($1,$2,$3,$4,$5)
-        RETURNING id,full_name,email,role,phone`,[full_name,email,hashedPassword,role,phone]
+        (full_name,email,password,role,phone,city,state)
+        VALUES ($1,$2,$3,$4,$5,$6,$7)
+        RETURNING id,full_name,email,role,phone,city,state`,[full_name,email,hashedPassword,role,phone,city,state]
       );
-      res.status(200).json({
+      res.status(201).json({
         success:true,
         message:"User Registered successfully"
       });
@@ -51,7 +51,7 @@ exports.loginUser = async(req,res)=>{
         `SELECT * FROM users WHERE email = $1`,[email]
       );
       if(user.rows.length === 0){
-        res.status(404).json({
+        return res.status(404).json({
             success:false,
             message:"User not found"
         });
