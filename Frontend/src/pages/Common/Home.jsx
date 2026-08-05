@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link,useNavigate } from "react-router-dom";
 const features = [
   {
     icon: "♻️",
@@ -120,10 +120,10 @@ export default function Home() {
           </a>
 
           <div className="hidden items-center gap-8 text-sm font-medium text-slate-600 lg:flex">
-            <a className="transition hover:text-emerald-500" href="#home">Home</a>
-            <a className="transition hover:text-emerald-500" href="#browse">Browse Clothes</a>
-            <a className="transition hover:text-emerald-500" href="#about">About</a>
-            <a className="transition hover:text-emerald-500" href="#how-it-works">How It Works</a>
+            <Link className="transition hover:text-emerald-500" to="#home">Home</Link>
+            <Link className="transition hover:text-emerald-500" to="#browse">Browse Clothes</Link>
+            <Link className="transition hover:text-emerald-500" to="#about">About</Link>
+            <Link className="transition hover:text-emerald-500" to="#how-it-works">How It Works</Link>
           </div>
 
           <div className="hidden items-center gap-3 lg:flex">
@@ -143,15 +143,14 @@ export default function Home() {
             {menuOpen ? "✕" : "☰"}
           </button>
         </div>
-
         {menuOpen && (
           <div className="border-t border-slate-200 bg-white px-6 py-5 lg:hidden">
             <div className="flex flex-col gap-4 text-sm font-medium text-slate-600">
-              <a href="#home" onClick={() => setMenuOpen(false)}>Home</a>
-              <a href="#browse" onClick={() => setMenuOpen(false)}>Browse Clothes</a>
-              <a href="#about" onClick={() => setMenuOpen(false)}>About</a>
-              <a href="#how-it-works" onClick={() => setMenuOpen(false)}>How It Works</a>
-              <button className="rounded-full bg-slate-900 px-5 py-3 font-semibold text-white">
+              <Link to="/" onClick={() => setMenuOpen(false)}>Home</Link>
+              <Link to="#browse" onClick={() => setMenuOpen(false)}>Browse Clothes</Link>
+              <Link to="#about" onClick={() => setMenuOpen(false)}>About</Link>
+              <Link to="#how-it-works" onClick={() => setMenuOpen(false)}>How It Works</Link>
+              <button onClick={()=>navigate("/register")} className="rounded-full bg-slate-900 px-5 py-3 font-semibold text-white">
                 Register
               </button>
             </div>
@@ -162,7 +161,7 @@ export default function Home() {
       <main>
         <section
           id="home"
-          className="relative isolate bg-gradient-to-br from-emerald-50 via-white to-slate-50"
+          className="relative isolate bg-linear-to-br from-emerald-50 via-white to-slate-50"
         >
           <div className="mx-auto grid max-w-7xl items-center gap-16 px-6 py-24 lg:grid-cols-2 lg:px-8 lg:py-32">
             <div>
@@ -189,13 +188,13 @@ export default function Home() {
                   Get Started
                   <ArrowIcon />
                 </button>
-                <a
-                  href="#browse"
+                <Link
+                  to="#browse"
                   className="inline-flex items-center gap-2 rounded-full px-5 py-3.5 text-sm font-bold text-slate-700 transition hover:bg-white hover:text-emerald-600"
                 >
                   Browse Clothes
                   <ArrowIcon />
-                </a>
+                </Link>
               </div>
 
               <div className="mt-10 flex items-center gap-3 text-sm text-slate-500">
@@ -216,9 +215,9 @@ export default function Home() {
               </div>
             </div>
 
-            <div className="relative mx-auto flex h-[430px] w-full max-w-xl items-center justify-center">
+            <div className="relative mx-auto flex h-107.5 w-full max-w-xl items-center justify-center">
               <div className="absolute h-72 w-72 rounded-full bg-emerald-200 sm:h-96 sm:w-96" />
-              <div className="absolute h-80 w-80 rounded-full border border-emerald-300/60 sm:h-[27rem] sm:w-[27rem]" />
+              <div className="absolute h-80 w-80 rounded-full border border-emerald-300/60 sm:h-108 sm:w-108" />
 
               <div className="relative z-10 flex items-center text-[7rem] drop-shadow-2xl sm:text-[10rem]">
                 <span>👩🏽‍🦱</span>
@@ -242,7 +241,7 @@ export default function Home() {
               <p className="mb-4 text-xs font-bold uppercase tracking-[0.2em] text-emerald-600">
                 Why ClothSwap
               </p>
-              <h2 className="text-4xl font-bold tracking-[-0.05em] text-slate-950 sm:text-6xl">
+              <h2 className="text-4xl font-bold tracking-tighter text-slate-950 sm:text-6xl">
                 A better way to
                 <br />
                 <span className="font-serif italic text-emerald-500">refresh your style.</span>
@@ -276,7 +275,7 @@ export default function Home() {
                 <p className="mb-4 text-xs font-bold uppercase tracking-[0.2em] text-emerald-600">
                   Simple by design
                 </p>
-                <h2 className="text-4xl font-bold tracking-[-0.05em] sm:text-6xl">
+                <h2 className="text-4xl font-bold tracking-tighter sm:text-6xl">
                   How it <span className="font-serif italic text-emerald-500">works</span>
                 </h2>
               </div>
@@ -301,7 +300,7 @@ export default function Home() {
               <p className="mb-4 text-xs font-bold uppercase tracking-[0.2em] text-emerald-600">
                 Find your next favorite
               </p>
-              <h2 className="text-4xl font-bold tracking-[-0.05em] sm:text-6xl">
+              <h2 className="text-4xl font-bold tracking-tighter sm:text-6xl">
                 Browse by <span className="font-serif italic text-emerald-500">category</span>
               </h2>
             </div>
@@ -312,8 +311,8 @@ export default function Home() {
 
           <div className="mt-14 grid grid-cols-2 gap-4 sm:grid-cols-4">
             {categories.map(([name, icon]) => (
-              <a
-                href="#browse"
+              <Link
+                to="#browse"
                 key={name}
                 className="group overflow-hidden rounded-3xl border border-slate-200 bg-white transition duration-300 hover:-translate-y-2 hover:shadow-xl"
               >
@@ -326,7 +325,7 @@ export default function Home() {
                     Explore swaps ↗
                   </span>
                 </div>
-              </a>
+              </Link>
             ))}
           </div>
         </section>
@@ -344,7 +343,7 @@ export default function Home() {
           <p className="mb-4 text-xs font-bold uppercase tracking-[0.2em] text-emerald-600">
             Loved by the community
           </p>
-          <h2 className="text-4xl font-bold tracking-[-0.05em] sm:text-6xl">
+          <h2 className="text-4xl font-bold tracking-tighter sm:text-6xl">
             Real people.
             <br />
             <span className="font-serif italic text-emerald-500">Real impact.</span>
@@ -372,14 +371,14 @@ export default function Home() {
           </div>
         </section>
 
-        <section className="mx-6 mb-24 overflow-hidden rounded-[2rem] bg-gradient          to-r from-emerald-50 via-white to-slate-100 px-8 py-20 sm:px-16 lg:mx-auto lg:max-w-7xl lg:px-24">
+        <section className="mx-6 mb-24 overflow-hidden rounded-4xl bg-linear-to-r from-emerald-50 via-white to-slate-100 px-8 py-20 sm:px-16 lg:mx-auto lg:max-w-7xl lg:px-24">
           <div className="grid items-center gap-12 lg:grid-cols-[1fr_auto]">
             <div>
               <p className="mb-4 text-xs font-bold uppercase tracking-[0.2em] text-emerald-600">
                 Your closet has more to give
               </p>
 
-              <h2 className="max-w-2xl text-4xl font-bold tracking-[-0.05em] text-slate-950 sm:text-6xl">
+              <h2 className="max-w-2xl text-4xl font-bold tracking-tighter text-slate-950 sm:text-6xl">
                 Ready to make your
                 <br />
                 <span className="font-serif italic text-emerald-500">
@@ -392,12 +391,12 @@ export default function Home() {
               </p>
 
               <div className="mt-8 flex flex-wrap gap-4">
-                <button className="inline-flex items-center gap-3 rounded-full bg-slate-900 px-6 py-3.5 text-sm font-bold text-white shadow-xl shadow-slate-900/20 transition hover:-translate-y-1 hover:bg-emerald-600">
+                <button onClick={()=>navigate("/register")} className="inline-flex items-center gap-3 rounded-full bg-slate-900 px-6 py-3.5 text-sm font-bold text-white shadow-xl shadow-slate-900/20 transition hover:-translate-y-1 hover:bg-emerald-600">
                   Register Now
                   <ArrowIcon />
                 </button>
 
-                <button className="rounded-full border border-slate-300 bg-white px-6 py-3.5 text-sm font-bold text-slate-700 transition hover:-translate-y-1 hover:border-emerald-500 hover:text-emerald-600">
+                <button onClick={()=>navigate("/login")} className="rounded-full border border-slate-300 bg-white px-6 py-3.5 text-sm font-bold text-slate-700 transition hover:-translate-y-1 hover:border-emerald-500 hover:text-emerald-600">
                   Login
                 </button>
               </div>
@@ -420,15 +419,15 @@ export default function Home() {
       <footer className="border-t border-slate-200 bg-white">
         <div className="mx-auto grid max-w-7xl gap-12 px-6 py-16 sm:grid-cols-2 lg:grid-cols-4 lg:px-8">
           <div>
-            <a
-              href="#home"
+            <Link
+              to="/"
               className="flex items-center gap-2 text-xl font-bold tracking-tight"
             >
               <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-500 text-lg text-white">
                 ✦
               </span>
               Cloth<span className="text-emerald-500">Swap</span>
-            </a>
+            </Link>
 
             <p className="mt-5 max-w-xs text-sm leading-6 text-slate-500">
               Fashion that moves forward. Discover, exchange, and make a
@@ -439,18 +438,18 @@ export default function Home() {
           <div>
             <h3 className="font-bold text-slate-900">Quick Links</h3>
             <div className="mt-5 flex flex-col gap-3 text-sm text-slate-500">
-              <a className="transition hover:text-emerald-600" href="#browse">
+              <Link className="transition hover:text-emerald-600" href="#browse">
                 Browse Clothes
-              </a>
-              <a className="transition hover:text-emerald-600" href="#how-it-works">
+              </Link>
+              <Link className="transition hover:text-emerald-600" href="#how-it-works">
                 How It Works
-              </a>
-              <a className="transition hover:text-emerald-600" href="#about">
+              </Link>
+              <Link className="transition hover:text-emerald-600" href="#about">
                 About Us
-              </a>
-              <a className="transition hover:text-emerald-600" href="#home">
+              </Link>
+              <Link className="transition hover:text-emerald-600" href="#home">
                 Sustainability
-              </a>
+              </Link>
             </div>
           </div>
 
