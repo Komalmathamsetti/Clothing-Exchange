@@ -33,11 +33,8 @@ exports.getProfile = async(req,res)=>{
     }
 };
 exports.updateProfile = async (req, res) => {
-
     try {
-
         const userId = req.user.id;
-
         const {
             full_name,
             phone,
@@ -74,56 +71,38 @@ exports.updateProfile = async (req, res) => {
         });
 
     } catch (err) {
-
         console.log(err);
-
         res.status(500).json({
             success: false,
             message: "Internal Server Error"
         });
-
     }
-
 };
-
-// =======================
-// Change Password
-// =======================
 exports.changePassword = async (req, res) => {
-
     try {
-
         const userId = req.user.id;
-
         const {
             oldPassword,
             newPassword
         } = req.body;
-
         const user = await pool.query(
             "SELECT * FROM users WHERE id=$1",
             [userId]
         );
-
         const isMatch = await bcrypt.compare(
             oldPassword,
             user.rows[0].password
         );
-
         if (!isMatch) {
-
             return res.status(400).json({
                 success: false,
                 message: "Old Password is incorrect"
             });
-
         }
-
         const hashedPassword = await bcrypt.hash(
             newPassword,
             10
         );
-
         await pool.query(
             `UPDATE users
              SET password=$1
@@ -151,16 +130,9 @@ exports.changePassword = async (req, res) => {
     }
 
 };
-
-// =======================
-// Delete Account
-// =======================
 exports.deleteAccount = async (req, res) => {
-
     try {
-
         const userId = req.user.id;
-
         await pool.query(
             `UPDATE users
              SET is_active=false
