@@ -1,101 +1,60 @@
+import { useState, useEffect } from "react";
+import { Link,useNavigate } from "react-router-dom";
+import DashboardLayout from "../../components/DashbaordLayout";
+import { getProfile,deleteAccount } from "../../services/userServices";
+import toast from "react-hot-toast";
+import Swal from "sweetalert2";
 export default function Profile() {
+  const navigate = useNavigate();
+  const [user,setUser] = useState(null);
+  const [loading,setLoading] = useState(true);
+  useEffect(()=>{
+  const fetchProfile = async()=>{
+    try{
+      const response = await getProfile();
+      setUser(response.data.user);
+    }catch(error){
+      toast.error(error.response?.data?.message || "Unable to fetch Profile");
+      navigate("/login");
+    }finally{
+      setLoading(false);
+    }
+  };
+  fetchProfile();
+  },[navigate]);
+  if(loading){
+    return(
+    <div className="flex h-screen items-center justify-center">
+    <h1 className="text-2xl font-bold">
+      Loading...
+    </h1>
+    </div>
+    );
+  }
+  const handleDelete = async () => {
+  const result = await Swal.fire({
+    title: "Delete Account?",
+    text: "This action cannot be undone.",
+    icon: "warning",
+    showCancelButton: true,
+    confirmButtonColor: "#dc2626",
+    cancelButtonColor: "#10b981",
+    confirmButtonText: "Delete",
+  });
+  if (!result.isConfirmed) return;
+  try {
+    const response = await deleteAccount();
+    toast.success(response.data.message);
+    localStorage.removeItem("token");
+    localStorage.removeItem("user");
+    navigate("/login");
+  } catch (error) {
+    toast.error(error.response?.data?.message);
+  }
+  };
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900">
-      <aside className="fixed inset-y-0 left-0 z-30 hidden w-72 border-r border-slate-200 bg-white lg:flex lg:flex-col">
-        <div className="flex h-20 items-center gap-3 border-b border-slate-100 px-7">
-          <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-emerald-500 text-xl text-white shadow-lg shadow-emerald-200">
-            ♻
-          </div>
-          <div>
-            <h1 className="text-lg font-bold">ClothSwap</h1>
-            <p className="text-xs text-slate-400">Sustainable fashion</p>
-          </div>
-        </div>
-
-        <nav className="flex-1 space-y-1 px-4 py-6">
-          <a href="#" className="flex items-center gap-3 rounded-xl px-4 py-3 text-sm text-slate-500 hover:bg-slate-50">
-            🏠 Dashboard
-          </a>
-          <a href="#" className="flex items-center gap-3 rounded-xl bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-700">
-            👤 My Profile
-          </a>
-          <a href="#" className="flex items-center gap-3 rounded-xl px-4 py-3 text-sm text-slate-500 hover:bg-slate-50">
-            👕 Add Clothing
-          </a>
-          <a href="#" className="flex items-center gap-3 rounded-xl px-4 py-3 text-sm text-slate-500 hover:bg-slate-50">
-            📦 My Listings
-          </a>
-          <a href="#" className="flex items-center gap-3 rounded-xl px-4 py-3 text-sm text-slate-500 hover:bg-slate-50">
-            🛍 Browse Clothes
-          </a>
-          <a href="#" className="flex items-center gap-3 rounded-xl px-4 py-3 text-sm text-slate-500 hover:bg-slate-50">
-            🔄 Swap Requests
-            <span className="ml-auto rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-bold text-emerald-700">
-              4
-            </span>
-          </a>
-          <a href="#" className="flex items-center gap-3 rounded-xl px-4 py-3 text-sm text-slate-500 hover:bg-slate-50">
-            📜 Swap History
-          </a>
-          <a href="#" className="flex items-center gap-3 rounded-xl px-4 py-3 text-sm text-slate-500 hover:bg-slate-50">
-            💬 Messages
-          </a>
-          <a href="#" className="flex items-center gap-3 rounded-xl px-4 py-3 text-sm text-slate-500 hover:bg-slate-50">
-            📍 Nearby Swaps
-          </a>
-          <a href="#" className="flex items-center gap-3 rounded-xl px-4 py-3 text-sm text-slate-500 hover:bg-slate-50">
-            💰 Value Calculator
-          </a>
-          <a href="#" className="flex items-center gap-3 rounded-xl px-4 py-3 text-sm text-slate-500 hover:bg-slate-50">
-            🔔 Notifications
-          </a>
-        </nav>
-
-        <div className="border-t border-slate-100 p-4">
-          <a href="#" className="flex items-center gap-3 rounded-xl px-4 py-3 text-sm text-slate-500 hover:bg-red-50 hover:text-red-600">
-            🚪 Logout
-          </a>
-        </div>
-      </aside>
-
-      <main className="lg:pl-72">
-        <header className="sticky top-0 z-20 flex h-20 items-center justify-between border-b border-slate-200 bg-white/90 px-5 backdrop-blur-xl sm:px-8">
-          <div className="flex items-center gap-3">
-            <a
-              href="#"
-              className="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 text-slate-600 lg:hidden"
-            >
-              ☰
-            </a>
-
-            <div className="relative hidden sm:block">
-              <span className="absolute left-4 top-2.5 text-slate-400">⌕</span>
-              <input
-                type="search"
-                placeholder="Search clothes, swaps..."
-                className="w-72 rounded-xl border border-slate-200 bg-slate-50 py-2.5 pl-10 pr-4 text-sm outline-none focus:border-emerald-400 focus:bg-white"
-              />
-            </div>
-          </div>
-
-          <div className="flex items-center gap-5">
-            <a href="#" className="relative text-xl text-slate-500">
-              🔔
-              <span className="absolute -right-1 -top-1 h-2.5 w-2.5 rounded-full border-2 border-white bg-emerald-500" />
-            </a>
-
-            <a href="#" className="flex items-center gap-3 border-l border-slate-200 pl-5">
-              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-emerald-100 font-bold text-emerald-700">
-                AM
-              </div>
-              <div className="hidden sm:block">
-                <p className="text-sm font-semibold">Alex Morgan</p>
-                <p className="text-xs text-slate-400">Fashion enthusiast</p>
-              </div>
-            </a>
-          </div>
-        </header>
-
+    <DashboardLayout user={user} showNavbar={false}>
+      
         <div className="mx-auto max-w-7xl space-y-8 p-5 sm:p-8">
           <div>
             <p className="text-sm font-medium text-emerald-600">Account settings</p>
@@ -112,62 +71,58 @@ export default function Profile() {
               <div className="-mt-16 flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
                 <div className="flex flex-col items-start gap-4 sm:flex-row sm:items-end">
                   <div className="flex h-32 w-32 items-center justify-center rounded-full border-8 border-white bg-linear-to-br from-emerald-100 via-teal-100 to-slate-200 text-4xl font-bold text-emerald-700 shadow-lg">
-                    AM
+                    {user?.full_name?.charAt(0).toUpperCase()}
                   </div>
 
                   <div className="pb-1">
                     <div className="flex flex-wrap items-center gap-3">
-                      <h3 className="text-2xl font-bold">Alex Morgan</h3>
+                      <h3 className="text-2xl font-bold">{user?.full_name}</h3>
                       <span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-bold text-emerald-700">
                         Verified member
                       </span>
                     </div>
                     <p className="mt-1 text-sm text-slate-500">
-                      Sustainable fashion enthusiast · Brooklyn, NY
+                      Sustainable fashion enthusiast · {user?.city}, {user?.state}
                     </p>
                   </div>
                 </div>
 
                 <div className="flex flex-wrap gap-3">
-                  <a
-                    href="#"
+                  <Link
+                    to="/update-profile"
                     className="rounded-xl bg-emerald-600 px-5 py-3 text-sm font-semibold text-white shadow-lg shadow-emerald-100 hover:bg-emerald-700"
                   >
                     Edit Profile
-                  </a>
-                  <a
-                    href="#"
+                  </Link>
+                  <Link
+                    to="/update-profile"
                     className="rounded-xl border border-slate-200 px-5 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50"
                   >
                     Change Password
-                  </a>
+                  </Link>
                 </div>
               </div>
 
               <div className="mt-8 grid gap-6 border-t border-slate-100 pt-7 sm:grid-cols-2 lg:grid-cols-3">
                 <div>
                   <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">Email</p>
-                  <p className="mt-2 text-sm font-medium">alex.morgan@example.com</p>
+                  <p className="mt-2 text-sm font-medium">{user?.email}</p>
                 </div>
                 <div>
                   <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">Phone</p>
-                  <p className="mt-2 text-sm font-medium">+1 (555) 284-0198</p>
+                  <p className="mt-2 text-sm font-medium">{user?.phone}</p>
                 </div>
                 <div>
                   <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">City</p>
-                  <p className="mt-2 text-sm font-medium">Brooklyn</p>
+                  <p className="mt-2 text-sm font-medium">{user?.city}</p>
                 </div>
                 <div>
                   <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">State</p>
-                  <p className="mt-2 text-sm font-medium">New York</p>
+                  <p className="mt-2 text-sm font-medium">{user?.state}</p>
                 </div>
                 <div>
                   <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">Role</p>
-                  <p className="mt-2 text-sm font-medium">Community Member</p>
-                </div>
-                <div>
-                  <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">Member Since</p>
-                  <p className="mt-2 text-sm font-medium">March 2023</p>
+                  <p className="mt-2 text-sm font-medium">{user?.role}</p>
                 </div>
               </div>
             </div>
@@ -281,12 +236,12 @@ export default function Profile() {
                 </div>
               </div>
 
-              <a
-                href="#"
+              <Link
+                to="/update-profile"
                 className="mt-8 block rounded-xl bg-slate-900 px-5 py-3 text-center text-sm font-semibold text-white hover:bg-slate-800"
               >
                 Complete Profile
-              </a>
+              </Link>
             </div>
           </section>
 
@@ -297,12 +252,12 @@ export default function Profile() {
                 Deleting your account permanently removes your profile and activity.
               </p>
             </div>
-            <a
-              href="#"
-              className="rounded-xl border border-red-200 bg-white px-5 py-3 text-sm font-semibold text-red-600 hover:bg-red-100"
+            <button
+              onClick={handleDelete}
+              className="rounded-xl border border-red-200 bg-white px-5 py-3 text-sm font-semibold text-red-600 hover:bg-red-100 cursor-pointer"
             >
               Delete Account
-            </a>
+            </button>
           </section>
 
           <footer className="flex flex-col items-center justify-between gap-3 border-t border-slate-200 pt-6 text-sm text-slate-400 sm:flex-row">
@@ -320,7 +275,6 @@ export default function Profile() {
             </div>
           </footer>
         </div>
-      </main>
-    </div>
+    </DashboardLayout>
   );
 }

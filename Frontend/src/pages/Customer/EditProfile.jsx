@@ -1,110 +1,136 @@
+import DashboardLayout from "../../components/DashbaordLayout";
+import {useState,useEffect} from "react";
+import {Link,useNavigate} from "react-router-dom";
+import Swal from "sweetalert2";
+import toast from "react-hot-toast";
+import { getProfile,updateProfile,changePassword,deleteAccount } from "../../services/userServices";
 export default function EditProfile() {
+  const navigate = useNavigate();
+  const [loading,setLoading] = useState(true);
+  const [user,setUser] = useState(null);
+  const [form,setForm] = useState({
+    full_name:"",
+    email:"",
+    phone:"",
+    city:"",
+    state:""
+  });
+  const [passwordData,setPasswordData] = useState({
+    oldPassword:"",
+    newPassword:"",
+    confirmPassword:""
+  });
+  const fetchProfile = async()=>{
+    try{
+      const response = await getProfile();
+      setUser(response.data.user);
+      setForm({
+        full_name:response.data.user.full_name,
+        email:response.data.user.email,
+        phone:response.data.user.phone,
+        city: response.data.user.city || "",
+        state: response.data.user.state || "",
+        role: response.data.user.role,
+      });
+    }catch(error){
+      toast.error(error.response?.data?.message);
+    }finally{
+      setLoading(false);
+    }
+  };
+  useEffect(()=>{
+    const loadProfile = async()=>{
+      await fetchProfile();
+    };
+    loadProfile();
+  },[]);
+  const handleChange = (e)=>{
+    setForm({
+      ...form,
+      [e.target.name]:e.target.value,
+    });
+  };
+  const handlePasswordChange = (e) => {
+    setPasswordData({
+      ...passwordData,
+      [e.target.name]: e.target.value,
+    });
+  };
+  const handleSubmit = async(e)=>{
+    e.preventDefault();
+    try{
+      const response = await updateProfile(form);
+      toast.success(response.data.message);
+      setUser(response.data.user);
+    }catch(error){
+      toast.error(error.response?.data?.message);
+    }
+  };
+  const handlePasswordSubmit = async(e)=>{
+    e.preventDefault();
+    if(passwordData.newPassword !== passwordData.confirmPassword){
+      return toast.error("Passwords do not match");
+    }
+    try{
+      const response = await changePassword({
+        oldPassword:passwordData.oldPassword,
+        newPassword:passwordData.newPassword
+      });
+      toast.success(response.data.message);
+      setPasswordData({
+        oldPassword:"",
+        newPassword:"",
+        confirmPassword:"",
+      });
+    }catch(error){
+      toast.error(error.response?.data?.message);
+    }
+  };
+  const handleDelete = async () => {
+  const result = await Swal.fire({
+    title: "Delete Account?",
+    text: "This action cannot be undone.",
+    icon: "warning",
+    showCancelButton: true,
+    confirmButtonColor: "#dc2626",
+    cancelButtonColor: "#10b981",
+    confirmButtonText: "Delete",
+  });
+  if (!result.isConfirmed) return;
+  try {
+    const response = await deleteAccount();
+    toast.success(response.data.message);
+    localStorage.removeItem("token");
+    localStorage.removeItem("user");
+    navigate("/login");
+  } catch (error) {
+    toast.error(error.response?.data?.message);
+  }
+  };
+  if(loading){
+    return(
+    <div className="flex h-screen items-center justify-center">
+    <h1 className="text-2xl font-bold">
+      Loading...
+    </h1>
+    </div>
+    );
+  }
   return (
+    <DashboardLayout user={user} showNavbar={false}>
     <div className="min-h-screen bg-slate-50 text-slate-900">
-      <aside className="fixed inset-y-0 left-0 z-30 hidden w-72 border-r border-slate-200 bg-white lg:flex lg:flex-col">
-        <div className="flex h-20 items-center gap-3 border-b border-slate-100 px-7">
-          <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-emerald-500 text-xl text-white shadow-lg shadow-emerald-200">
-            ♻
-          </div>
-          <div>
-            <h1 className="text-lg font-bold">ClothSwap</h1>
-            <p className="text-xs text-slate-400">Sustainable fashion</p>
-          </div>
-        </div>
-
-        <nav className="flex-1 space-y-1 px-4 py-6">
-          <a href="#" className="flex items-center gap-3 rounded-xl px-4 py-3 text-sm text-slate-500 hover:bg-slate-50">
-            🏠 Dashboard
-          </a>
-          <a href="#" className="flex items-center gap-3 rounded-xl bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-700">
-            👤 My Profile
-          </a>
-          <a href="#" className="flex items-center gap-3 rounded-xl px-4 py-3 text-sm text-slate-500 hover:bg-slate-50">
-            👕 Add Clothing
-          </a>
-          <a href="#" className="flex items-center gap-3 rounded-xl px-4 py-3 text-sm text-slate-500 hover:bg-slate-50">
-            📦 My Listings
-          </a>
-          <a href="#" className="flex items-center gap-3 rounded-xl px-4 py-3 text-sm text-slate-500 hover:bg-slate-50">
-            🛍 Browse Clothes
-          </a>
-          <a href="#" className="flex items-center gap-3 rounded-xl px-4 py-3 text-sm text-slate-500 hover:bg-slate-50">
-            🔄 Swap Requests
-            <span className="ml-auto rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-bold text-emerald-700">
-              4
-            </span>
-          </a>
-          <a href="#" className="flex items-center gap-3 rounded-xl px-4 py-3 text-sm text-slate-500 hover:bg-slate-50">
-            📜 Swap History
-          </a>
-          <a href="#" className="flex items-center gap-3 rounded-xl px-4 py-3 text-sm text-slate-500 hover:bg-slate-50">
-            💬 Messages
-          </a>
-          <a href="#" className="flex items-center gap-3 rounded-xl px-4 py-3 text-sm text-slate-500 hover:bg-slate-50">
-            📍 Nearby Swaps
-          </a>
-          <a href="#" className="flex items-center gap-3 rounded-xl px-4 py-3 text-sm text-slate-500 hover:bg-slate-50">
-            💰 Value Calculator
-          </a>
-          <a href="#" className="flex items-center gap-3 rounded-xl px-4 py-3 text-sm text-slate-500 hover:bg-slate-50">
-            🔔 Notifications
-          </a>
-        </nav>
-
-        <div className="border-t border-slate-100 p-4">
-          <a href="#" className="flex items-center gap-3 rounded-xl px-4 py-3 text-sm text-slate-500 hover:bg-red-50 hover:text-red-600">
-            🚪 Logout
-          </a>
-        </div>
-      </aside>
-
-      <main className="lg:pl-72">
-        <header className="sticky top-0 z-20 flex h-20 items-center justify-between border-b border-slate-200 bg-white/90 px-5 backdrop-blur-xl sm:px-8">
-          <div className="flex items-center gap-3">
-            <a
-              href="#"
-              className="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 text-slate-600 lg:hidden"
-            >
-              ☰
-            </a>
-
-            <div className="relative hidden sm:block">
-              <span className="absolute left-4 top-2.5 text-slate-400">⌕</span>
-              <input
-                type="search"
-                placeholder="Search clothes, swaps..."
-                className="w-72 rounded-xl border border-slate-200 bg-slate-50 py-2.5 pl-10 pr-4 text-sm outline-none focus:border-emerald-400 focus:bg-white"
-              />
-            </div>
-          </div>
-
-          <div className="flex items-center gap-5">
-            <a href="#" className="relative text-xl text-slate-500">
-              🔔
-              <span className="absolute -right-1 -top-1 h-2.5 w-2.5 rounded-full border-2 border-white bg-emerald-500" />
-            </a>
-
-            <a href="#" className="flex items-center gap-3 border-l border-slate-200 pl-5">
-              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-emerald-100 font-bold text-emerald-700">
-                AM
-              </div>
-              <div className="hidden sm:block">
-                <p className="text-sm font-semibold">Alex Morgan</p>
-                <p className="text-xs text-slate-400">Fashion enthusiast</p>
-              </div>
-            </a>
-          </div>
-        </header>
-
         <div className="mx-auto max-w-5xl space-y-8 p-5 sm:p-8">
-          <div>
-            <p className="text-sm font-medium text-emerald-600">Account settings</p>
-            <h2 className="mt-1 text-3xl font-bold tracking-tight">Edit Profile</h2>
-            <p className="mt-2 text-sm text-slate-500">
-              Keep your profile information up to date.
-            </p>
+          <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <p className="text-sm font-semibold uppercase tracking-wider text-emerald-600">Account Settings</p>
+              <h1 className="mt-1 text-4xl font-bold text-slate-900">Edit Profile</h1>
+              <p className="mt-2 text-slate-500">Keep your profile information up to date.</p>
+            </div>
+            <button type="button" onClick={() => navigate("/profile")} className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-5 py-3 text-sm font-semibold text-slate-700 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-emerald-500 hover:bg-emerald-50 hover:text-emerald-600">
+              ← Back
+            </button>
           </div>
-
+          <form onSubmit={handleSubmit}>
           <section className="rounded-3xl border border-white/70 bg-white/80 p-6 shadow-xl shadow-slate-200/50 backdrop-blur-xl sm:p-8">
             <div className="mb-8 border-b border-slate-100 pb-6">
               <h3 className="text-lg font-bold">Personal Information</h3>
@@ -115,7 +141,7 @@ export default function EditProfile() {
 
             <div className="mb-8 flex flex-col items-center gap-5 rounded-2xl bg-slate-50/80 p-6 sm:flex-row">
               <div className="flex h-28 w-28 items-center justify-center rounded-full border-8 border-white bg-linear-to-br from-emerald-100 via-teal-100 to-slate-200 text-3xl font-bold text-emerald-700 shadow-lg">
-                AM
+                {user?.full_name?.charAt(0).toUpperCase()}
               </div>
 
               <div className="text-center sm:text-left">
@@ -139,8 +165,9 @@ export default function EditProfile() {
                 </label>
                 <input
                   type="text"
-                  value="Alex Morgan"
-                  readOnly
+                  name="full_name"
+                  value={form.full_name}
+                  onChange={handleChange}
                   className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none transition focus:border-emerald-400 focus:ring-4 focus:ring-emerald-500/10"
                 />
               </div>
@@ -151,7 +178,8 @@ export default function EditProfile() {
                 </label>
                 <input
                   type="email"
-                  value="alex.morgan@example.com"
+                  name="email"
+                  value={form.email}
                   disabled
                   className="w-full cursor-not-allowed rounded-xl border border-slate-200 bg-slate-100 px-4 py-3 text-sm text-slate-400 outline-none"
                 />
@@ -166,8 +194,9 @@ export default function EditProfile() {
                 </label>
                 <input
                   type="tel"
-                  value="+1 (555) 284-0198"
-                  readOnly
+                  name="phone"
+                  value={form.phone}
+                  onChange={handleChange}
                   className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none transition focus:border-emerald-400 focus:ring-4 focus:ring-emerald-500/10"
                 />
               </div>
@@ -178,8 +207,9 @@ export default function EditProfile() {
                 </label>
                 <input
                   type="text"
-                  value="Brooklyn"
-                  readOnly
+                  name="city"
+                  value={form.city}
+                  onChange={handleChange}
                   className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none transition focus:border-emerald-400 focus:ring-4 focus:ring-emerald-500/10"
                 />
               </div>
@@ -190,8 +220,9 @@ export default function EditProfile() {
                 </label>
                 <input
                   type="text"
-                  value="New York"
-                  readOnly
+                  name="state"
+                  value={form.state}
+                  onChange={handleChange}
                   className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none transition focus:border-emerald-400 focus:ring-4 focus:ring-emerald-500/10"
                 />
               </div>
@@ -202,7 +233,8 @@ export default function EditProfile() {
                 </label>
                 <input
                   type="text"
-                  value="Community Member"
+                  name="role"
+                  value={form.role}
                   disabled
                   className="w-full cursor-not-allowed rounded-xl border border-slate-200 bg-slate-100 px-4 py-3 text-sm text-slate-400 outline-none"
                 />
@@ -210,21 +242,23 @@ export default function EditProfile() {
             </div>
 
             <div className="mt-8 flex flex-col-reverse gap-3 border-t border-slate-100 pt-6 sm:flex-row sm:justify-end">
-              <a
-                href="#"
-                className="rounded-xl border border-slate-200 px-6 py-3 text-center text-sm font-semibold text-slate-600 hover:bg-slate-50"
+              <button
+                type="button"
+                onClick={()=>navigate("/profile")}
+                className="rounded-xl border border-slate-200 px-6 py-3 text-center text-sm font-semibold text-slate-600 hover:bg-slate-50 cursor-pointer"
               >
                 Cancel
-              </a>
-              <a
-                href="#"
-                className="rounded-xl bg-emerald-600 px-6 py-3 text-center text-sm font-semibold text-white shadow-lg shadow-emerald-100 hover:bg-emerald-700"
+              </button>
+              <button
+                type="submit"
+                className="rounded-xl bg-emerald-600 px-6 py-3 text-center text-sm font-semibold text-white shadow-lg shadow-emerald-100 hover:bg-emerald-700 cursor-pointer"
               >
                 Save Changes
-              </a>
+              </button>
             </div>
           </section>
-
+          </form>
+          <form onSubmit={handlePasswordSubmit}>
           <section className="rounded-3xl border border-white/70 bg-white/80 p-6 shadow-xl shadow-slate-200/50 backdrop-blur-xl sm:p-8">
             <div className="mb-8 border-b border-slate-100 pb-6">
               <h3 className="text-lg font-bold">Change Password</h3>
@@ -240,6 +274,9 @@ export default function EditProfile() {
                 </label>
                 <input
                   type="password"
+                  name="oldPassword"
+                  value={passwordData.oldPassword}
+                  onChange={handlePasswordChange}
                   placeholder="Enter current password"
                   className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none transition placeholder:text-slate-400 focus:border-emerald-400 focus:ring-4 focus:ring-emerald-500/10"
                 />
@@ -251,6 +288,9 @@ export default function EditProfile() {
                 </label>
                 <input
                   type="password"
+                  name="newPassword"
+                  value={passwordData.newPassword}
+                  onChange={handlePasswordChange}
                   placeholder="Enter new password"
                   className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none transition placeholder:text-slate-400 focus:border-emerald-400 focus:ring-4 focus:ring-emerald-500/10"
                 />
@@ -262,20 +302,23 @@ export default function EditProfile() {
                 </label>
                 <input
                   type="password"
+                  name="confirmPassword"
+                  value={passwordData.confirmPassword}
                   placeholder="Confirm new password"
+                  onChange={handlePasswordChange}
                   className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none transition placeholder:text-slate-400 focus:border-emerald-400 focus:ring-4 focus:ring-emerald-500/10"
                 />
               </div>
 
-              <a
-                href="#"
+              <button
+                type="submit"
                 className="inline-flex rounded-xl bg-slate-900 px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-slate-200 hover:bg-slate-800"
               >
                 Update Password
-              </a>
+              </button>
             </div>
           </section>
-
+          </form>
           <section className="flex flex-col items-start justify-between gap-5 rounded-3xl border border-red-200 bg-red-50/80 p-6 shadow-lg shadow-red-100/50 sm:flex-row sm:items-center sm:p-8">
             <div>
               <div className="flex items-center gap-3">
@@ -290,30 +333,30 @@ export default function EditProfile() {
               </p>
             </div>
 
-            <a
-              href="#"
+            <button
+              onClick={handleDelete}
               className="shrink-0 rounded-xl border border-red-200 bg-white px-5 py-3 text-sm font-semibold text-red-600 shadow-sm hover:bg-red-100"
             >
               Delete Account
-            </a>
+            </button>
           </section>
 
           <footer className="flex flex-col items-center justify-between gap-3 border-t border-slate-200 pt-6 text-sm text-slate-400 sm:flex-row">
             <p>© 2024 ClothSwap. Make fashion circular.</p>
             <div className="flex gap-5">
-              <a href="#" className="hover:text-emerald-600">
+              <Link to="/help" className="hover:text-emerald-600">
                 Help Center
-              </a>
-              <a href="#" className="hover:text-emerald-600">
+              </Link>
+              <Link to="/privacy" className="hover:text-emerald-600">
                 Privacy
-              </a>
-              <a href="#" className="hover:text-emerald-600">
+              </Link>
+              <Link to="/terms-conditions" className="hover:text-emerald-600">
                 Terms
-              </a>
+              </Link>
             </div>
           </footer>
         </div>
-      </main>
     </div>
+    </DashboardLayout>
   );
 }

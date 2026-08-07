@@ -1,8 +1,8 @@
 import { useState,useEffect } from "react";
 import { Link,useNavigate } from "react-router-dom";
 import { getProfile } from "../../services/userServices";
+import DashboardLayout from "../../components/DashbaordLayout";
 import toast from "react-hot-toast";
-import Swal from "sweetalert2";
 export default function Dashboard() {
   const navigate = useNavigate();
   const [user,setUser] = useState(null);
@@ -33,109 +33,9 @@ export default function Dashboard() {
       </div>
     );
   }
-  const handleLogout = async () => {
-  const result = await Swal.fire({
-    title: "Logout?",
-    text: "Are you sure you want to logout?",
-    icon: "warning",
-    showCancelButton: true,
-    confirmButtonColor: "#10b981",
-    cancelButtonColor: "#ef4444",
-    confirmButtonText: "Yes, Logout",
-    cancelButtonText: "Cancel",
-  });
-
-  if (result.isConfirmed) {
-
-    localStorage.removeItem("token");
-    localStorage.removeItem("user");
-
-    Swal.fire({
-      icon: "success",
-      title: "Logged Out",
-      text: "You have been logged out successfully.",
-      timer: 1500,
-      showConfirmButton: false,
-    });
-
-    setTimeout(() => {
-      navigate("/login");
-    }, 1500);
-  }
-  };
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900">
-      <aside className="fixed inset-y-0 left-0 z-30 hidden w-72 border-r border-slate-200 bg-white lg:flex lg:flex-col">
-        <div className="flex h-20 items-center gap-3 border-b border-slate-100 px-7">
-          <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-emerald-500 text-xl text-white shadow-lg shadow-emerald-200">
-            ♻
-          </div>
-          <div>
-            <h1 className="text-lg font-bold">ClothSwap</h1>
-            <p className="text-xs text-slate-400">Sustainable fashion</p>
-          </div>
-        </div>
-
-        <nav className="flex-1 space-y-1 px-4 py-6">
-          <Link to="/dashboard" className="flex items-center gap-3 rounded-xl bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-700">🏠 Dashboard</Link>
-          <Link to="/profile" className="flex items-center gap-3 rounded-xl px-4 py-3 text-sm text-slate-500 hover:bg-slate-50">👤 My Profile</Link>
-          <Link to="#" className="flex items-center gap-3 rounded-xl px-4 py-3 text-sm text-slate-500 hover:bg-slate-50">👕 Add Clothing</Link>
-          <Link to="#" className="flex items-center gap-3 rounded-xl px-4 py-3 text-sm text-slate-500 hover:bg-slate-50">📦 My Listings</Link>
-          <Link to="#" className="flex items-center gap-3 rounded-xl px-4 py-3 text-sm text-slate-500 hover:bg-slate-50">🛍 Browse Clothes</Link>
-          <Link to="#" className="flex items-center gap-3 rounded-xl px-4 py-3 text-sm text-slate-500 hover:bg-slate-50">
-            🔄 Swap Requests
-            <span className="ml-auto rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-bold text-emerald-700">4</span>
-          </Link>
-          <Link to="#" className="flex items-center gap-3 rounded-xl px-4 py-3 text-sm text-slate-500 hover:bg-slate-50">📜 Swap History</Link>
-          <Link to="#" className="flex items-center gap-3 rounded-xl px-4 py-3 text-sm text-slate-500 hover:bg-slate-50">💬 Messages</Link>
-          <Link to="#" className="flex items-center gap-3 rounded-xl px-4 py-3 text-sm text-slate-500 hover:bg-slate-50">📍 Nearby Swaps</Link>
-          <Link to="#" className="flex items-center gap-3 rounded-xl px-4 py-3 text-sm text-slate-500 hover:bg-slate-50">💰 Value Calculator</Link>
-          <Link to="#" className="flex items-center gap-3 rounded-xl px-4 py-3 text-sm text-slate-500 hover:bg-slate-50">🔔 Notifications</Link>
-        </nav>
-
-        <div className="border-t border-slate-100 p-4">
-          <button onClick={handleLogout} className="flex items-center gap-3 rounded-xl px-4 py-3 text-sm text-slate-500 hover:bg-red-50 hover:text-red-600">
-            🚪 Logout
-          </button>
-        </div>
-      </aside>
-
-      <main className="lg:pl-72">
-        <header className="sticky top-0 z-20 flex h-20 items-center justify-between border-b border-slate-200 bg-white/90 px-5 backdrop-blur-xl sm:px-8">
-          <div className="flex items-center gap-3">
-            <a href="#" className="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 text-slate-600 lg:hidden">
-              ☰
-            </a>
-
-            <div className="relative hidden sm:block">
-              <span className="absolute left-4 top-2.5 text-slate-400">⌕</span>
-              <input
-                type="search"
-                placeholder="Search clothes, swaps..."
-                className="w-72 rounded-xl border border-slate-200 bg-slate-50 py-2.5 pl-10 pr-4 text-sm outline-none focus:border-emerald-400 focus:bg-white"
-              />
-            </div>
-          </div>
-
-          <div className="flex items-center gap-5">
-            <a href="#" className="relative text-xl text-slate-500">
-              🔔
-              <span className="absolute -right-1 -top-1 h-2.5 w-2.5 rounded-full border-2 border-white bg-emerald-500" />
-            </a>
-
-            <a href="#" className="flex items-center gap-3 border-l border-slate-200 pl-5">
-              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-emerald-100 font-bold text-emerald-700">
-                {user?.full_name?.charAt(0).toUpperCase()}
-              </div>
-              <div className="hidden sm:block">
-                <p className="text-sm font-semibold">{user?.full_name}</p>
-                <p className="text-xs text-slate-400">{user?.role}</p>
-              </div>
-            </a>
-          </div>
-        </header>
-
-        <div className="mx-auto max-w-7xl space-y-8 p-5 sm:p-8">
+    <DashboardLayout user = {user}>
+        <div className="space-y-8">
           <section className="relative overflow-hidden rounded-3xl bg-emerald-600 p-7 text-white shadow-xl shadow-emerald-100 sm:p-10">
             <div className="relative z-10 max-w-2xl">
               <p className="mb-3 text-sm text-emerald-100">Thursday, August 8, 2024</p>
@@ -324,7 +224,6 @@ export default function Dashboard() {
             </div>
           </footer>
         </div>
-      </main>
-    </div>
+  </DashboardLayout>
   );
 }
