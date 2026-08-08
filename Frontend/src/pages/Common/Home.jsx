@@ -127,10 +127,10 @@ export default function Home() {
           </div>
 
           <div className="hidden items-center gap-3 lg:flex">
-            <button onClick={()=>navigate("/login")} className="rounded-full px-5 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-100">
+            <button onClick={()=>navigate("/login")} className="rounded-full px-5 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-100 cursor-pointer">
               Login
             </button>
-            <button onClick={()=>navigate("/register")} className="rounded-full bg-slate-900 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-slate-900/20 transition hover:-translate-y-0.5 hover:bg-emerald-600">
+            <button onClick={()=>navigate("/register")} className="rounded-full bg-slate-900 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-slate-900/20 transition hover:-translate-y-0.5 hover:bg-emerald-600 cursor-pointer">
               Register
             </button>
           </div>
@@ -150,7 +150,10 @@ export default function Home() {
               <Link to="#browse" onClick={() => setMenuOpen(false)}>Browse Clothes</Link>
               <Link to="#about" onClick={() => setMenuOpen(false)}>About</Link>
               <Link to="#how-it-works" onClick={() => setMenuOpen(false)}>How It Works</Link>
-              <button onClick={()=>navigate("/register")} className="rounded-full bg-slate-900 px-5 py-3 font-semibold text-white">
+              <button onClick={()=>navigate("/login")} className="rounded-full px-5 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-100 cursor-pointer">
+                Login
+              </button>
+              <button onClick={()=>navigate("/register")} className="rounded-full bg-slate-900 px-5 py-3 font-semibold text-white cursor-pointer">
                 Register
               </button>
             </div>

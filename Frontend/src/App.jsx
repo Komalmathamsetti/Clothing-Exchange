@@ -5,6 +5,8 @@ import Register from "./pages/Common/Register";
 import CustomerDashboard from "./pages/Customer/CustomerDashboard";
 import CustomerProfile from "./pages/Customer/Profile";
 import EditProfile from "./pages/Customer/EditProfile";
+import AddClothing from "./pages/Customer/AddClothing";
+import MyListings from "./pages/Customer/MyListings";
 function App() {
   return (
     <BrowserRouter>
@@ -15,6 +17,8 @@ function App() {
         <Route path="/dashboard" element={<CustomerDashboard/>}/>
         <Route path="/profile" element={<CustomerProfile/>}/>
         <Route path="/update-profile" element={<EditProfile/>}/>
+        <Route path="/add-clothing" element={<AddClothing/>}/>
+        <Route path="/my-listings" element={<MyListings/>}/>
       </Routes>
     </BrowserRouter>
   );
