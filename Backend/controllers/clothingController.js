@@ -264,3 +264,49 @@ exports.getCategories = async (req, res) => {
         });
     }
 };
+exports.getAllClothings = async(req,res)=>{
+    try{
+      const userId = req.user.id;
+      const result = await pool.query(
+        `SELECT
+        ci.id,
+        ci.owner_id,
+        ci.category_id,
+        c.name AS category,
+        ci.title,
+        ci.description,
+        ci.brand,
+        ci.size,
+        ci.clothing_condition,
+        ci.color,
+        ci.gender,
+        ci.estimated_value,
+        ci.city,
+        ci.state,
+        ci.status,
+        ci.created_at,
+        u.full_name AS owner_name,
+        u.rating AS owner_rating,
+        u.completed_swaps AS owner_completed_swaps
+      FROM clothing_items ci
+      LEFT JOIN categories c
+        ON ci.category_id = c.id
+      LEFT JOIN users u
+        ON ci.owner_id = u.id
+      WHERE ci.status = 'AVAILABLE'
+        AND ci.owner_id != $1
+      ORDER BY ci.created_at DESC`,[userId]
+      );
+      res.status(200).json({
+        success:true,
+        count:result.rows.length,
+        clothing:result.rows
+      });
+    }catch(error){
+        console.log(error);
+        res.status(500).json({
+            success:false,
+            message:"Server Error"
+        });
+    }
+};

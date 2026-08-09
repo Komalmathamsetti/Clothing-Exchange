@@ -12,6 +12,9 @@ API.interceptors.request.use((config)=>{
 export const createClothing = (clothingData)=>{
     return API.post("/",clothingData);
 };
+export const getAllClothings = ()=>{
+    return API.get("/");
+};
 export const getCategories = ()=>{
     return API.get("/categories");
 };

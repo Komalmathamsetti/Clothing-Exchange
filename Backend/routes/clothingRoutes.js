@@ -1,8 +1,9 @@
 const express = require("express");
 const router = express.Router();
-const { createClothing,getCategories,getMyListings,getClothingById,updateClothing,deleteClothing } = require("../controllers/clothingController");
+const { createClothing,getCategories,getMyListings,getClothingById,updateClothing,deleteClothing, getAllClothings } = require("../controllers/clothingController");
 const { verifyToken } = require("../middleware/authMiddleware");
 router.post("/",verifyToken,createClothing);
+router.get("/",verifyToken,getAllClothings);
 router.get("/categories",verifyToken,getCategories);
 router.get("/my-listings",verifyToken,getMyListings);
 router.get("/:id",verifyToken,getClothingById);

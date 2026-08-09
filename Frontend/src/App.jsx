@@ -7,6 +7,8 @@ import CustomerProfile from "./pages/Customer/Profile";
 import EditProfile from "./pages/Customer/EditProfile";
 import AddClothing from "./pages/Customer/AddClothing";
 import MyListings from "./pages/Customer/MyListings";
+import EditClothing from "./pages/Customer/EditClothing";
+import BrowseClothes from "./pages/Customer/BrowseClothes";
 function App() {
   return (
     <BrowserRouter>
@@ -19,6 +21,8 @@ function App() {
         <Route path="/update-profile" element={<EditProfile/>}/>
         <Route path="/add-clothing" element={<AddClothing/>}/>
         <Route path="/my-listings" element={<MyListings/>}/>
+        <Route path="/edit-clothing/:id" element={<EditClothing/>}/>
+        <Route path="/browse-clothes" element={<BrowseClothes/>}/>
       </Routes>
     </BrowserRouter>
   );

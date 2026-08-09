@@ -2,7 +2,8 @@ import DashboardLayout from "../../components/DashbaordLayout";
 import { useState,useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
-import { getMyListings } from "../../services/clothingServices";
+import Swal from "sweetalert2";
+import { getMyListings,deleteClothing } from "../../services/clothingServices";
 export default function MyListings() {
   const navigate = useNavigate();
   const [user] = useState(() => {
@@ -29,6 +30,31 @@ export default function MyListings() {
     };
     loadListings();
   },[]);
+  const handleDelete = async(id)=>{
+    const result = await Swal.fire({
+      title: "Delete Listing?",
+      text: "This clothing listing will be permanently removed.",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonColor: "#ef4444",
+      cancelButtonColor: "#64748b",
+      confirmButtonText: "Yes, Delete",
+      cancelButtonText: "Cancel",
+    });
+    if(!result.isConfirmed){
+      return;
+    }
+    try{
+      await deleteClothing(id);
+      toast.success("Clothing listed deleted successfully");
+      setListings((prev) =>
+       prev.filter((listing) => listing.id !== id)
+      );
+    }catch(error){
+      console.log(error);
+      toast.error(error.response?.data?.message || "Failed to delete clothing");
+    }
+  };
   return (
     <DashboardLayout user={user} showNavbar={true}>
     <main className="min-h-screen bg-slate-50 px-4 py-8 sm:px-6 lg:px-10">
@@ -160,6 +186,14 @@ export default function MyListings() {
                 >
                   {listing.status}
                 </span>
+                <div className="flex items-center gap-2">
+                  <button type="button" onClick={() => navigate(`/edit-clothing/${listing.id}`)} className="rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-600 hover:border-emerald-300 hover:text-emerald-600 cursor-pointer">
+                    Edit
+                  </button>
+                  <button type="button" onClick={() => handleDelete(listing.id)} className="rounded-lg border border-red-200 px-3 py-2 text-xs font-semibold text-red-600 hover:bg-red-50 cursor-pointer">
+                    Delete
+                  </button>
+                </div>
               </div>
             ))}
           </div>

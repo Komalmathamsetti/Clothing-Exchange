@@ -24,13 +24,91 @@ export default function EditClothing() {
     city:"",
     state:""
   });
-  const [laoding,setLoading] = useState(true);
+  const [loading,setLoading] = useState(true);
   const [saving,setSaving] = useState(false);
-   if (loading) {
+  useEffect(()=>{
+    const loadData = async()=>{
+      try{
+        const [clothingResponse,categoriesResponse] = await Promise.all([
+          getClothingById(id),
+          getCategories()
+        ]);
+        const clothing = clothingResponse.data.clothing;
+        setCategories(categoriesResponse.data.categories || []);
+        setFormData({
+          category_id: clothing.category_id || "",
+          title: clothing.title || "",
+          description: clothing.description || "",
+          brand: clothing.brand || "",
+          size: clothing.size || "",
+          clothing_condition:
+          clothing.clothing_condition || "",
+          color: clothing.color || "",
+          gender: clothing.gender || "",
+          estimated_value:
+          clothing.estimated_value || "",
+          city: clothing.city || "",
+          state: clothing.state || "",
+        });
+      }catch(error){
+        console.log(error);
+        toast.error(error.response?.data?.message || "Failed to load clothing");
+        navigate("/my-listings");
+      }finally{
+        setLoading(false);
+      }
+    };
+    loadData();
+  },[id,navigate]);
+  const handleChange = (e)=>{
+    const { name,value } = e.target;
+    setFormData((prev)=>({
+      ...prev,
+      [name]:value,
+    }));
+  };
+  const handleSubmit = async(e)=>{
+    e.preventDefault();
+    if(!formData.category_id || !formData.title.trim() || !formData.size || !formData.clothing_condition){
+      toast.error("Please provide category,title,size and condition");
+      return;
+    }
+    try{
+      setSaving(true);
+      const data={
+        category_id: Number(formData.category_id),
+        title: formData.title,
+        description: formData.description || null,
+        brand: formData.brand || null,
+        size: formData.size,
+        clothing_condition:
+          formData.clothing_condition,
+        color: formData.color || null,
+        gender: formData.gender || null,
+        estimated_value: formData.estimated_value
+          ? Number(formData.estimated_value)
+          : null,
+        city: formData.city || null,
+        state: formData.state || null,
+      };
+      const response = await updateClothing(id,data);
+      toast.success(response.data.message || "Clothing updated successfully");
+      navigate("/my-listings");
+    }catch(error){
+      console.log("UPDATE CLOTHING ERROR:", error);
+      toast.error(
+        error.response?.data?.message ||
+          "Failed to update clothing"
+      );
+    }finally{
+      setSaving(false);
+    }
+  };
+  if (loading) {
     return (
-      <DashboardLayout user={user} showNavbar={true}>
+      <DashboardLayout user={user} showNavbar={false}>
         <main className="min-h-[calc(100vh-86px)] bg-slate-50">
-          <div className="flex min-h-[500px] items-center justify-center">
+          <div className="flex min-h-125 items-center justify-center">
             <div className="text-center">
               <div className="mx-auto h-10 w-10 animate-spin rounded-full border-4 border-emerald-200 border-t-emerald-600" />
 
@@ -44,6 +122,7 @@ export default function EditClothing() {
     );
   }
   return (
+    <DashboardLayout user={user} showNavbar={false}>
     <main className="min-h-screen bg-slate-50 px-4 py-8 sm:px-6 lg:px-10">
       <div className="mx-auto max-w-6xl">
         {/* Header */}
@@ -64,6 +143,7 @@ export default function EditClothing() {
 
           <button
             type="button"
+            onClick={()=>navigate("/my-listings")}
             className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-5 py-3 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-emerald-300 hover:text-emerald-600"
           >
             <span className="text-lg">←</span>
@@ -72,7 +152,7 @@ export default function EditClothing() {
         </div>
 
         {/* Main Card */}
-        <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-[0_20px_60px_rgba(15,23,42,0.06)] sm:p-8">
+        <form onSubmit={handleSubmit} className="rounded-3xl border border-slate-200 bg-white p-5 shadow-[0_20px_60px_rgba(15,23,42,0.06)] sm:p-8">
           {/* Basic Information */}
           <section>
             <div className="mb-6">
@@ -91,7 +171,9 @@ export default function EditClothing() {
                 </label>
                 <input
                   type="text"
-                  defaultValue="Classic Denim Jacket"
+                  name="title"
+                  value={formData.title}
+                  onChange={handleChange}
                   className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10"
                 />
               </div>
@@ -101,17 +183,17 @@ export default function EditClothing() {
                   Category
                 </label>
                 <select
-                  defaultValue="Jackets"
+                  name="category_id"
+                  value={formData.category_id}
+                  onChange={handleChange}
                   className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10"
                 >
-                  <option>Shirts</option>
-                  <option>T-Shirts</option>
-                  <option>Jeans</option>
-                  <option>Dresses</option>
-                  <option>Jackets</option>
-                  <option>Hoodies</option>
-                  <option>Footwear</option>
-                  <option>Accessories</option>
+                  <option value="">Select a category</option>
+                  {categories.map((category) => (
+                    <option key={category.id} value={category.id}>
+                      {category.name}
+                    </option>
+                  ))}
                 </select>
               </div>
 
@@ -120,8 +202,10 @@ export default function EditClothing() {
                   Description
                 </label>
                 <textarea
+                  name="description"
                   rows="5"
-                  defaultValue="A timeless blue denim jacket in excellent condition. Comfortable, versatile, and perfect for everyday layering."
+                  value={formData.description}
+                  onChange={handleChange}
                   className="w-full resize-none rounded-xl border border-slate-200 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10"
                 />
               </div>
@@ -148,7 +232,9 @@ export default function EditClothing() {
                 </label>
                 <input
                   type="text"
-                  defaultValue="Levi's"
+                  name="brand"
+                  value={formData.brand}
+                  onChange={handleChange}
                   className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10"
                 />
               </div>
@@ -158,15 +244,18 @@ export default function EditClothing() {
                   Size
                 </label>
                 <select
-                  defaultValue="M"
+                  name="size"
+                  value={formData.size}
+                  onChange={handleChange}
                   className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10"
                 >
-                  <option>XS</option>
-                  <option>S</option>
-                  <option>M</option>
-                  <option>L</option>
-                  <option>XL</option>
-                  <option>XXL</option>
+                  <option value="">Select Size</option>
+                  <option value="XS">XS</option>
+                  <option value="S">S</option>
+                  <option value="M">M</option>
+                  <option value="L">L</option>
+                  <option value="XL">XL</option>
+                  <option value="XXL">XXL</option>
                 </select>
               </div>
 
@@ -175,13 +264,16 @@ export default function EditClothing() {
                   Condition
                 </label>
                 <select
-                  defaultValue="Like New"
+                  name="clothing_condition"
+                  value={formData.clothing_condition}
+                  onChange={handleChange}
                   className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10"
                 >
-                  <option>New</option>
-                  <option>Like New</option>
-                  <option>Good</option>
-                  <option>Fair</option>
+                  <option value="">Selection condition</option>
+                  <option value="NEW">New</option>
+                  <option value="LIKE_NEW">Like New</option>
+                  <option value="GOOD">Good</option>
+                  <option value="FAIR">Fair</option>
                 </select>
               </div>
 
@@ -191,7 +283,9 @@ export default function EditClothing() {
                 </label>
                 <input
                   type="text"
-                  defaultValue="Deep Blue"
+                  name="color"
+                  value={formData.color}
+                  onChange={handleChange}
                   className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10"
                 />
               </div>
@@ -201,12 +295,15 @@ export default function EditClothing() {
                   Gender
                 </label>
                 <select
-                  defaultValue="Unisex"
+                  name="gender"
+                  value={formData.gender}
+                  onChange={handleChange}
                   className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10"
                 >
-                  <option>Men</option>
-                  <option>Women</option>
-                  <option>Unisex</option>
+                  <option value="">Select Gender</option>
+                  <option value="MEN">Men</option>
+                  <option value="WOMEN">Women</option>
+                  <option value="UNISEX">Unisex</option>
                 </select>
               </div>
             </div>
@@ -232,7 +329,9 @@ export default function EditClothing() {
                 </span>
                 <input
                   type="number"
-                  defaultValue="1800"
+                  name="estimated_value"
+                  value={formData.estimated_value}
+                  onChange={handleChange}
                   className="w-full px-4 py-3 text-sm text-slate-900 outline-none"
                 />
               </div>
@@ -251,14 +350,18 @@ export default function EditClothing() {
             <div className="mt-6 grid gap-6 sm:grid-cols-2">
               <input
                 type="text"
-                defaultValue="Mumbai"
+                name="city"
+                value={formData.city}
+                onChange={handleChange}
                 placeholder="City"
                 className="rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10"
               />
 
               <input
                 type="text"
-                defaultValue="Maharashtra"
+                name="state"
+                value={formData.state}
+                onChange={handleChange}
                 placeholder="State"
                 className="rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10"
               />
@@ -266,105 +369,28 @@ export default function EditClothing() {
           </section>
 
           <div className="my-10 border-t border-slate-100" />
-
-          {/* Photos */}
-          <section>
-            <div className="mb-6">
-              <h2 className="text-lg font-bold text-slate-900">Photos</h2>
-              <p className="mt-1 text-sm text-slate-500">
-                Manage the photos shown on your clothing listing.
-              </p>
-            </div>
-
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {existingImages.map((image, index) => (
-                <div
-                  key={image}
-                  className="group relative overflow-hidden rounded-2xl border border-slate-200 bg-slate-100"
-                >
-                  <img
-                    src={image}
-                    alt={`Clothing preview ${index + 1}`}
-                    className="h-56 w-full object-cover transition duration-300 group-hover:scale-105"
-                  />
-
-                  <button
-                    type="button"
-                    className="absolute right-3 top-3 flex h-9 w-9 items-center justify-center rounded-full bg-white/95 text-slate-600 shadow-md transition hover:bg-red-50 hover:text-red-600"
-                    aria-label={`Remove image ${index + 1}`}
-                  >
-                    <svg
-                      className="h-4 w-4"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth="2"
-                        d="M6 18L18 6M6 6l12 12"
-                      />
-                    </svg>
-                  </button>
-
-                  {index === 0 && (
-                    <span className="absolute bottom-3 left-3 rounded-full bg-slate-900/80 px-3 py-1 text-xs font-semibold text-white">
-                      Cover photo
-                    </span>
-                  )}
-                </div>
-              ))}
-
-              {/* Add More Photos */}
-              <div className="flex min-h-56 cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed border-emerald-200 bg-emerald-50/40 px-5 text-center transition hover:border-emerald-400 hover:bg-emerald-50">
-                <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-xl bg-white text-emerald-600 shadow-sm">
-                  <svg
-                    className="h-6 w-6"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth="1.8"
-                      d="M12 4v16m8-8H4"
-                    />
-                  </svg>
-                </div>
-
-                <p className="font-semibold text-slate-800">
-                  Add more photos
-                </p>
-                <p className="mt-1 text-xs text-slate-500">
-                  PNG, JPG or WEBP
-                </p>
-                <p className="mt-1 text-xs text-slate-400">
-                  Up to 5 photos
-                </p>
-              </div>
-            </div>
-          </section>
-
           {/* Actions */}
           <div className="mt-10 flex flex-col-reverse gap-3 border-t border-slate-100 pt-6 sm:flex-row sm:justify-end">
             <button
               type="button"
-              className="rounded-xl border border-slate-200 bg-white px-6 py-3 text-sm font-semibold text-slate-600 transition hover:border-slate-300 hover:bg-slate-50"
+              onClick={()=>navigate("/my-listings")}
+              disabled={saving}
+              className="rounded-xl border border-slate-200 bg-white px-6 py-3 text-sm font-semibold text-slate-600 transition hover:border-slate-300 hover:bg-slate-50 cursor-pointer"
             >
               Cancel
             </button>
 
             <button
-              type="button"
-              className="rounded-xl bg-emerald-600 px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-emerald-600/20 transition hover:bg-emerald-700 hover:shadow-emerald-600/30"
+              type="submit"
+              disabled={saving}
+              className="rounded-xl bg-emerald-600 px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-emerald-600/20 transition hover:bg-emerald-700 hover:shadow-emerald-600/30 cursor-pointer"
             >
-              Save Changes
+              {saving?"Saving...":"Save Changes"}
             </button>
           </div>
-        </div>
+        </form>
       </div>
     </main>
+    </DashboardLayout>
   );
 }
