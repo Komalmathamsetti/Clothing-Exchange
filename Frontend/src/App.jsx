@@ -9,6 +9,7 @@ import AddClothing from "./pages/Customer/AddClothing";
 import MyListings from "./pages/Customer/MyListings";
 import EditClothing from "./pages/Customer/EditClothing";
 import BrowseClothes from "./pages/Customer/BrowseClothes";
+import ClothingDetails from "./pages/Customer/ClothingDetails";
 function App() {
   return (
     <BrowserRouter>
@@ -23,6 +24,7 @@ function App() {
         <Route path="/my-listings" element={<MyListings/>}/>
         <Route path="/edit-clothing/:id" element={<EditClothing/>}/>
         <Route path="/browse-clothes" element={<BrowseClothes/>}/>
+        <Route path="/clothing/:id" element={<ClothingDetails/>}/>
       </Routes>
     </BrowserRouter>
   );

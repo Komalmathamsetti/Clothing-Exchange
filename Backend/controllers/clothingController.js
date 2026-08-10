@@ -110,36 +110,52 @@ exports.getMyListings = async (req, res) => {
     }
 };
 exports.getClothingById = async (req, res) => {
-    try {
-        const { id } = req.params;
-        const result = await pool.query(
-            `SELECT
-                ci.*,
-                c.name AS category_name,
-                u.full_name AS owner_name
-             FROM clothing_items ci
-             LEFT JOIN categories c
-             ON ci.category_id = c.id
-             LEFT JOIN users u
-             ON ci.owner_id = u.id
-             WHERE ci.id = $1`,
-            [id]
-        );
-        if (result.rows.length === 0) {
-            return res.status(404).json({
-                success: false,
-                message: "Clothing item not found"
-            });
-        }
-        res.status(200).json({
-            success: true,
-            clothing: result.rows[0]
-        });
-    } catch (error) {
+    try{
+      const clothingId = req.params.id;
+      const result = await pool.query(
+        `SELECT
+        ci.id,
+        ci.owner_id,
+        ci.category_id,
+        c.name AS category,
+        ci.title,
+        ci.description,
+        ci.brand,
+        ci.size,
+        ci.clothing_condition,
+        ci.color,
+        ci.gender,
+        ci.estimated_value,
+        ci.city,
+        ci.state,
+        ci.status,
+        ci.created_at,
+        ci.updated_at,
+        u.full_name AS owner_name,
+        u.rating AS owner_rating,
+        u.completed_swaps AS owner_completed_swaps
+      FROM clothing_items AS ci
+      LEFT JOIN categories AS c
+        ON ci.category_id = c.id
+      LEFT JOIN users AS u
+        ON ci.owner_id = u.id
+      WHERE ci.id = $1`,[clothingId]
+      );
+      if(result.rows.length === 0){
+        return res.status(200).json({
+        success:true,
+        message:"Clothing Item not found"
+       });
+      }
+      res.status(200).json({
+        success:true,
+        clothing:result.rows[0],
+      });
+    }catch(error){
         console.log(error);
         res.status(500).json({
-            success: false,
-            message: "Internal Server Error"
+            success:false,
+            message:"Server Error"
         });
     }
 };
