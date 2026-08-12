@@ -10,6 +10,8 @@ import MyListings from "./pages/Customer/MyListings";
 import EditClothing from "./pages/Customer/EditClothing";
 import BrowseClothes from "./pages/Customer/BrowseClothes";
 import ClothingDetails from "./pages/Customer/ClothingDetails";
+import SwapRequests from "./pages/Cloth Swaping pages/SwapingRequests";
+import SwapHistory from "./pages/Cloth Swaping pages/SwapingHistory";
 function App() {
   return (
     <BrowserRouter>
@@ -25,6 +27,8 @@ function App() {
         <Route path="/edit-clothing/:id" element={<EditClothing/>}/>
         <Route path="/browse-clothes" element={<BrowseClothes/>}/>
         <Route path="/clothing/:id" element={<ClothingDetails/>}/>
+        <Route path="/swap-requests" element={<SwapRequests/>}/>
+        <Route path="/history" element={<SwapHistory/>}/>
       </Routes>
     </BrowserRouter>
   );

@@ -119,26 +119,26 @@ export default function Dashboard() {
               <p className="mt-1 text-sm text-slate-400">Jump back into your wardrobe</p>
 
               <div className="mt-6 grid grid-cols-2 gap-3">
-                <a href="#" className="rounded-2xl border border-slate-200 p-4 hover:border-emerald-300 hover:bg-emerald-50">
+                <Link to="/add-clothing" className="rounded-2xl border border-slate-200 p-4 hover:border-emerald-300 hover:bg-emerald-50">
                   <span className="text-xl">👕</span>
                   <p className="mt-3 text-sm font-semibold">Add Clothing</p>
-                </a>
-                <a href="#" className="rounded-2xl border border-slate-200 p-4 hover:border-emerald-300 hover:bg-emerald-50">
+                </Link>
+                <Link to="/browse-clothes" className="rounded-2xl border border-slate-200 p-4 hover:border-emerald-300 hover:bg-emerald-50">
                   <span className="text-xl">🛍</span>
                   <p className="mt-3 text-sm font-semibold">Browse Clothes</p>
-                </a>
-                <a href="#" className="rounded-2xl border border-slate-200 p-4 hover:border-emerald-300 hover:bg-emerald-50">
+                </Link>
+                <Link to="/swap-requests" className="rounded-2xl border border-slate-200 p-4 hover:border-emerald-300 hover:bg-emerald-50">
                   <span className="text-xl">🔄</span>
                   <p className="mt-3 text-sm font-semibold">Swap Requests</p>
-                </a>
-                <a href="#" className="rounded-2xl border border-slate-200 p-4 hover:border-emerald-300 hover:bg-emerald-50">
+                </Link>
+                <Link to="/messages" className="rounded-2xl border border-slate-200 p-4 hover:border-emerald-300 hover:bg-emerald-50">
                   <span className="text-xl">💬</span>
                   <p className="mt-3 text-sm font-semibold">Messages</p>
-                </a>
-                <a href="#" className="col-span-2 rounded-2xl border border-slate-200 p-4 hover:border-emerald-300 hover:bg-emerald-50">
+                </Link>
+                <Link to="/nearby-swaps" className="col-span-2 rounded-2xl border border-slate-200 p-4 hover:border-emerald-300 hover:bg-emerald-50">
                   <span className="text-xl">📍</span>
                   <p className="mt-3 text-sm font-semibold">Nearby Swaps</p>
-                </a>
+                </Link>
               </div>
             </div>
           </section>
