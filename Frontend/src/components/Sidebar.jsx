@@ -57,7 +57,6 @@ export default function Sidebar(){
           <NavLink to="/browse-clothes" className={navClass}>🛍 Browse Clothes</NavLink>
           <NavLink to="/swap-requests" className={navClass}>
             🔄 Swap Requests
-            <span className="ml-auto rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-bold text-emerald-700">4</span>
           </NavLink>
           <NavLink to="/history" className={navClass}>📜 Swap History</NavLink>
           <NavLink to="/messages" className={navClass}>💬 Messages</NavLink>

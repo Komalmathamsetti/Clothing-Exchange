@@ -3,18 +3,18 @@ exports.createSwapRequest = async(req,res)=>{
     try{
       const senderId = req.user.id;
       const {
-        receiver_id,
+        reciever_id,
         sender_item_id,
-        receiver_item_id,
+        reciever_item_id,
         message
       } = req.body;
-      if(!receiver_id || !sender_item_id || !receiver_item_id){
+      if(!reciever_id || !sender_item_id || !reciever_item_id){
         return res.status(400).json({
             success:false,
-            message:"receiver_id, sender_item_id and receiver_item_id are required"
+            message:"reciever_id, sender_item_id and reciever_item_id are required"
         });
       }
-      if(Number(senderId) === Number(receiver_id)){
+      if(Number(senderId) === Number(reciever_id)){
         return res.status(400).json({
             success:false,
             message:"You cannot send a swap request to yourself"
@@ -45,32 +45,32 @@ exports.createSwapRequest = async(req,res)=>{
           "Your offered clothing item is not available",
       });
     }
-    const receiverItemResult = await pool.query(
+    const recieverItemResult = await pool.query(
       `SELECT id,owner_id,status
       FROM clothing_items 
-      WHERE id = $1`,[receiver_item_id]
+      WHERE id = $1`,[reciever_item_id]
     );
-    if(receiverItemResult.rows.length === 0){
+    if(recieverItemResult.rows.length === 0){
       return res.status(403).json({
         success:false,
         message:"Requested clothing item was not found"
       });
     }
-    const receiverItem = receiverItemResult.rows[0];
-    if(Number(receiverItem.owner_id) !== Number(receiver_id)){
+    const recieverItem = recieverItemResult.rows[0];
+    if(Number(recieverItem.owner_id) !== Number(reciever_id)){
       return res.status(403).json({
         success:false,
-        message:"The receiver does not own this clothing item"
+        message:"The reciever does not own this clothing item"
       });
     }
-    if (receiverItem.status?.toUpperCase() !=="AVAILABLE") {
+    if (recieverItem.status?.toUpperCase() !=="AVAILABLE") {
       return res.status(400).json({
         success: false,
         message:
           "The requested clothing item is no longer available",
       });
     }
-     if (Number(sender_item_id) === Number(receiver_item_id)) {
+     if (Number(sender_item_id) === Number(reciever_item_id)) {
       return res.status(400).json({
         success: false,
         message:
@@ -81,10 +81,10 @@ exports.createSwapRequest = async(req,res)=>{
       `SELECT id
       FROM swap_requests
       WHERE sender_id = $1
-        AND receiver_id = $2
+        AND reciever_id = $2
         AND sender_item_id = $3
-        AND receiver_item_id = $4
-        AND status = 'PENDING'`,[ senderId,receiver_id,sender_item_id,receiver_item_id,]
+        AND reciever_item_id = $4
+        AND status = 'PENDING'`,[ senderId,reciever_id,sender_item_id,reciever_item_id,]
     );
     if (duplicateResult.rows.length > 0) {
       return res.status(409).json({
@@ -103,9 +103,9 @@ exports.createSwapRequest = async(req,res)=>{
       INSERT INTO swap_requests
       (
         sender_id,
-        receiver_id,
+        reciever_id,
         sender_item_id,
-        receiver_item_id,
+        reciever_item_id,
         message,
         status
       )
@@ -115,9 +115,9 @@ exports.createSwapRequest = async(req,res)=>{
       `,
       [
         senderId,
-        receiver_id,
+        reciever_id,
         sender_item_id,
-        receiver_item_id,
+        reciever_item_id,
         message || null,
       ]
     );
@@ -155,32 +155,35 @@ exports.getSentRequests = async (req, res) => {
       SELECT
         sr.id,
         sr.sender_id,
-        sr.receiver_id,
+        sr.reciever_id,
         sr.sender_item_id,
-        sr.receiver_item_id,
+        sr.reciever_item_id,
         sr.message,
         sr.status,
         sr.created_at,
 
-        receiver.full_name AS receiver_name,
-        receiver.rating AS receiver_rating,
+        reciever.full_name AS reciever_name,
+        reciever.rating AS reciever_rating,
 
         sender_item.title AS sender_item_title,
         sender_item.brand AS sender_item_brand,
-
-        receiver_item.title AS receiver_item_title,
-        receiver_item.brand AS receiver_item_brand
+        sender_item.size AS sender_item_size,
+        sender_item.clothing_condition AS sender_item_condition,
+        reciever_item.title AS reciever_item_title,
+        reciever_item.brand AS reciever_item_brand,
+        reciever_item.size AS reciever_item_size,
+        reciever_item.clothing_condition AS reciever_item_condition
 
       FROM swap_requests sr
 
-      LEFT JOIN users receiver
-        ON sr.receiver_id = receiver.id
+      LEFT JOIN users reciever
+        ON sr.reciever_id = reciever.id
 
       LEFT JOIN clothing_items sender_item
         ON sr.sender_item_id = sender_item.id
 
-      LEFT JOIN clothing_items receiver_item
-        ON sr.receiver_item_id = receiver_item.id
+      LEFT JOIN clothing_items reciever_item
+        ON sr.reciever_item_id = reciever_item.id
 
       WHERE sr.sender_id = $1
 
@@ -210,10 +213,10 @@ exports.getSentRequests = async (req, res) => {
 
 
 // =====================================================
-// GET RECEIVED REQUESTS
+// GET recieveD REQUESTS
 // =====================================================
 
-exports.getReceivedRequests = async (req, res) => {
+exports.getrecievedRequests = async (req, res) => {
   try {
     const userId = req.user.id;
 
@@ -222,9 +225,9 @@ exports.getReceivedRequests = async (req, res) => {
       SELECT
         sr.id,
         sr.sender_id,
-        sr.receiver_id,
+        sr.reciever_id,
         sr.sender_item_id,
-        sr.receiver_item_id,
+        sr.reciever_item_id,
         sr.message,
         sr.status,
         sr.created_at,
@@ -237,10 +240,10 @@ exports.getReceivedRequests = async (req, res) => {
         sender_item.size AS sender_item_size,
         sender_item.clothing_condition AS sender_item_condition,
 
-        receiver_item.title AS receiver_item_title,
-        receiver_item.brand AS receiver_item_brand,
-        receiver_item.size AS receiver_item_size,
-        receiver_item.clothing_condition AS receiver_item_condition
+        reciever_item.title AS reciever_item_title,
+        reciever_item.brand AS reciever_item_brand,
+        reciever_item.size AS reciever_item_size,
+        reciever_item.clothing_condition AS reciever_item_condition
 
       FROM swap_requests sr
 
@@ -250,10 +253,10 @@ exports.getReceivedRequests = async (req, res) => {
       LEFT JOIN clothing_items sender_item
         ON sr.sender_item_id = sender_item.id
 
-      LEFT JOIN clothing_items receiver_item
-        ON sr.receiver_item_id = receiver_item.id
+      LEFT JOIN clothing_items reciever_item
+        ON sr.reciever_item_id = reciever_item.id
 
-      WHERE sr.receiver_id = $1
+      WHERE sr.reciever_id = $1
 
       ORDER BY sr.created_at DESC
       `,
@@ -268,13 +271,13 @@ exports.getReceivedRequests = async (req, res) => {
 
   } catch (error) {
     console.error(
-      "GET RECEIVED REQUESTS ERROR:",
+      "GET recieveD REQUESTS ERROR:",
       error
     );
 
     res.status(500).json({
       success: false,
-      message: "Failed to fetch received requests",
+      message: "Failed to fetch recieved requests",
     });
   }
 };
@@ -298,9 +301,9 @@ exports.getSwapRequestById = async (req, res) => {
         sender.email AS sender_email,
         sender.rating AS sender_rating,
 
-        receiver.full_name AS receiver_name,
-        receiver.email AS receiver_email,
-        receiver.rating AS receiver_rating,
+        reciever.full_name AS reciever_name,
+        reciever.email AS reciever_email,
+        reciever.rating AS reciever_rating,
 
         sender_item.title AS sender_item_title,
         sender_item.brand AS sender_item_brand,
@@ -308,30 +311,30 @@ exports.getSwapRequestById = async (req, res) => {
         sender_item.clothing_condition AS sender_item_condition,
         sender_item.estimated_value AS sender_item_value,
 
-        receiver_item.title AS receiver_item_title,
-        receiver_item.brand AS receiver_item_brand,
-        receiver_item.size AS receiver_item_size,
-        receiver_item.clothing_condition AS receiver_item_condition,
-        receiver_item.estimated_value AS receiver_item_value
+        reciever_item.title AS reciever_item_title,
+        reciever_item.brand AS reciever_item_brand,
+        reciever_item.size AS reciever_item_size,
+        reciever_item.clothing_condition AS reciever_item_condition,
+        reciever_item.estimated_value AS reciever_item_value
 
       FROM swap_requests sr
 
       LEFT JOIN users sender
         ON sr.sender_id = sender.id
 
-      LEFT JOIN users receiver
-        ON sr.receiver_id = receiver.id
+      LEFT JOIN users reciever
+        ON sr.reciever_id = reciever.id
 
       LEFT JOIN clothing_items sender_item
         ON sr.sender_item_id = sender_item.id
 
-      LEFT JOIN clothing_items receiver_item
-        ON sr.receiver_item_id = receiver_item.id
+      LEFT JOIN clothing_items reciever_item
+        ON sr.reciever_item_id = reciever_item.id
 
       WHERE sr.id = $1
         AND (
           sr.sender_id = $2
-          OR sr.receiver_id = $2
+          OR sr.reciever_id = $2
         )
       `,
       [requestId, userId]
@@ -371,7 +374,7 @@ exports.acceptSwapRequest = async (req, res) => {
   const client = await pool.connect();
 
   try {
-    const receiverId = req.user.id;
+    const recieverId = req.user.id;
     const requestId = req.params.id;
 
     await client.query("BEGIN");
@@ -398,17 +401,17 @@ exports.acceptSwapRequest = async (req, res) => {
 
     const request = requestResult.rows[0];
 
-    // Only receiver can accept
+    // Only reciever can accept
     if (
-      Number(request.receiver_id) !==
-      Number(receiverId)
+      Number(request.reciever_id) !==
+      Number(recieverId)
     ) {
       await client.query("ROLLBACK");
 
       return res.status(403).json({
         success: false,
         message:
-          "Only the receiver can accept this request",
+          "Only the reciever can accept this request",
       });
     }
 
@@ -436,7 +439,7 @@ exports.acceptSwapRequest = async (req, res) => {
       `,
       [
         request.sender_item_id,
-        request.receiver_item_id,
+        request.reciever_item_id,
       ]
     );
 
@@ -456,16 +459,16 @@ exports.acceptSwapRequest = async (req, res) => {
         Number(request.sender_item_id)
     );
 
-    const receiverItem = itemsResult.rows.find(
+    const recieverItem = itemsResult.rows.find(
       (item) =>
         Number(item.id) ===
-        Number(request.receiver_item_id)
+        Number(request.reciever_item_id)
     );
 
     if (
       senderItem.status?.toUpperCase() !==
         "AVAILABLE" ||
-      receiverItem.status?.toUpperCase() !==
+      recieverItem.status?.toUpperCase() !==
         "AVAILABLE"
     ) {
       await client.query("ROLLBACK");
@@ -487,7 +490,7 @@ exports.acceptSwapRequest = async (req, res) => {
       `,
       [
         request.sender_item_id,
-        request.receiver_item_id,
+        request.reciever_item_id,
       ]
     );
 
@@ -512,13 +515,13 @@ exports.acceptSwapRequest = async (req, res) => {
         AND id <> $1
         AND (
           sender_item_id IN ($2, $3)
-          OR receiver_item_id IN ($2, $3)
+          OR reciever_item_id IN ($2, $3)
         )
       `,
       [
         requestId,
         request.sender_item_id,
-        request.receiver_item_id,
+        request.reciever_item_id,
       ]
     );
 
@@ -532,7 +535,7 @@ exports.acceptSwapRequest = async (req, res) => {
       `,
       [
         request.sender_id,
-        request.receiver_id,
+        request.reciever_id,
       ]
     );
 
@@ -570,7 +573,7 @@ exports.acceptSwapRequest = async (req, res) => {
 
 exports.rejectSwapRequest = async (req, res) => {
   try {
-    const receiverId = req.user.id;
+    const recieverId = req.user.id;
     const requestId = req.params.id;
 
     const result = await pool.query(
@@ -578,11 +581,11 @@ exports.rejectSwapRequest = async (req, res) => {
       UPDATE swap_requests
       SET status = 'REJECTED'
       WHERE id = $1
-        AND receiver_id = $2
+        AND reciever_id = $2
         AND status = 'PENDING'
       RETURNING *
       `,
-      [requestId, receiverId]
+      [requestId, recieverId]
     );
 
     if (result.rows.length === 0) {

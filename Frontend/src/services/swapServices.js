@@ -18,9 +18,9 @@ export const getSentRequests = () => {
   return API.get("/sent");
 };
 
-// Get requests received by current user
-export const getReceivedRequests = () => {
-  return API.get("/received");
+// Get requests recieved by current user
+export const getrecievedRequests = () => {
+  return API.get("/recieved");
 };
 
 // Get single swap request

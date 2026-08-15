@@ -61,8 +61,8 @@ function SwapHistoryCard({ swap }) {
   const senderName =
     swap.sender_name || swap.sender?.name || "ClothSwap member";
 
-  const receiverName =
-    swap.receiver_name || swap.receiver?.name || "ClothSwap member";
+  const recieverName =
+    swap.reciever_name || swap.reciever?.name || "ClothSwap member";
 
   const offeredItem =
     swap.offered_clothing ||
@@ -74,7 +74,7 @@ function SwapHistoryCard({ swap }) {
     swap.requested_clothing ||
     swap.requested_item ||
     swap.requestedItem ||
-    swap.receiver_item;
+    swap.reciever_item;
 
   const swapDate =
     swap.swap_date || swap.date || swap.created_at || swap.updated_at;
@@ -95,7 +95,7 @@ function SwapHistoryCard({ swap }) {
               <h2 className="text-base font-bold text-slate-900">
                 {senderName}{" "}
                 <span className="font-normal text-slate-400">with</span>{" "}
-                {receiverName}
+                {recieverName}
               </h2>
             </div>
           </div>

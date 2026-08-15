@@ -97,7 +97,7 @@ export default function Dashboard() {
                 <div className="flex items-center gap-4 rounded-2xl bg-slate-50 p-3">
                   <div className="h-14 w-14 rounded-xl bg-linear-to-br from-sky-200 to-indigo-300" />
                   <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-semibold">New swap request received</p>
+                    <p className="truncate text-sm font-semibold">New swap request recieved</p>
                     <p className="mt-1 text-xs text-slate-400">Linen summer shirt · 5 hours ago</p>
                   </div>
                   <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold text-amber-700">Pending</span>

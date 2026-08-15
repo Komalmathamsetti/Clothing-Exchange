@@ -189,7 +189,7 @@ export default function Profile() {
                 <div className="relative flex gap-4">
                   <div className="z-10 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-amber-100 text-sm">↗</div>
                   <div>
-                    <p className="text-sm font-semibold">New swap request received</p>
+                    <p className="text-sm font-semibold">New swap request recieved</p>
                     <p className="mt-1 text-xs leading-5 text-slate-400">Taylor wants to swap for your linen summer shirt.</p>
                     <p className="mt-2 text-xs font-medium text-amber-600">Today · 5 hours ago</p>
                   </div>

@@ -3,7 +3,7 @@ const router = express.Router();
 const {
   createSwapRequest,
   getSentRequests,
-  getReceivedRequests,
+  getrecievedRequests,
   getSwapRequestById,
   acceptSwapRequest,
   rejectSwapRequest,
@@ -21,11 +21,11 @@ router.get(
   verifyToken,
   getSentRequests
 );
-// Received requests
+// recieved requests
 router.get(
-  "/received",
+  "/recieved",
   verifyToken,
-  getReceivedRequests
+  getrecievedRequests
 );
 // Single request
 router.get(
