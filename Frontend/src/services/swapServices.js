@@ -19,7 +19,7 @@ export const getSentRequests = () => {
 };
 
 // Get requests recieved by current user
-export const getrecievedRequests = () => {
+export const getRecievedRequests = () => {
   return API.get("/recieved");
 };
 

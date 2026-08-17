@@ -1,6 +1,6 @@
 import {useState,useEffect} from "react";
 import toast from "react-hot-toast";
-import { getrecievedRequests,getSentRequests,acceptSwapRequest,rejectSwapRequest } from "../../services/swapServices";
+import { getRecievedRequests,getSentRequests,acceptSwapRequest,rejectSwapRequest } from "../../services/swapServices";
 import {
   ArrowLeftRight,
   Check,
@@ -221,7 +221,7 @@ export default function SwapRequests() {
         try{
             setLoading(true);
             const [recievedResponse,sentResponse]=await Promise.all([
-                getrecievedRequests(),
+                getRecievedRequests(),
                 getSentRequests(),
             ]);
             setrecievedRequests(recievedResponse.data.requests || []);

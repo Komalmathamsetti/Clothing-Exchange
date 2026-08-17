@@ -1,3 +1,4 @@
+import {useState,useEffect} from "react";
 import {
   ArrowLeftRight,
   CalendarDays,
@@ -9,6 +10,8 @@ import {
   RotateCcw,
   XCircle,
 } from "lucide-react";
+import toast from "react-hot-toast";
+import { getSentRequests,getRecievedRequests } from "../../services/swapServices";
 import DashboardLayout from "../../components/DashbaordLayout";
 const statusStyles = {
   ACCEPTED: "bg-emerald-50 text-emerald-700 ring-emerald-600/20",
@@ -20,12 +23,13 @@ const statusStyles = {
 
 const formatStatus = (status = "") =>
   status.charAt(0).toUpperCase() + status.slice(1).toLowerCase();
-
 function ClothingItem({ item }) {
-  if (!item) {
+  if (!item || !item.title) {
     return (
       <div className="flex-1 rounded-2xl border border-slate-200 bg-slate-50 p-4">
-        <p className="text-sm text-slate-400">Item unavailable</p>
+        <p className="text-sm text-slate-400">
+          Item unavailable
+        </p>
       </div>
     );
   }
@@ -39,11 +43,26 @@ function ClothingItem({ item }) {
 
         <div className="min-w-0">
           <p className="truncate text-sm font-bold text-slate-900">
-            {item.name || item.title || "Clothing item"}
+            {item.title}
           </p>
+
           <p className="mt-1 truncate text-xs font-medium text-slate-500">
             {item.brand || "Brand not specified"}
           </p>
+
+          <div className="mt-2 flex flex-wrap gap-1.5">
+            {item.size && (
+              <span className="rounded-full bg-slate-100 px-2 py-1 text-[11px] text-slate-600">
+                Size: {item.size}
+              </span>
+            )}
+
+            {item.condition && (
+              <span className="rounded-full bg-slate-100 px-2 py-1 text-[11px] text-slate-600">
+                {item.condition}
+              </span>
+            )}
+          </div>
         </div>
       </div>
     </div>
@@ -64,18 +83,19 @@ function SwapHistoryCard({ swap }) {
   const recieverName =
     swap.reciever_name || swap.reciever?.name || "ClothSwap member";
 
-  const offeredItem =
-    swap.offered_clothing ||
-    swap.offered_item ||
-    swap.offeredItem ||
-    swap.sender_item;
+  const offeredItem = {
+    title: swap.sender_item_title,
+    brand: swap.sender_item_brand,
+    size: swap.sender_item_size,
+    condition: swap.sender_item_condition,
+  };
 
-  const requestedItem =
-    swap.requested_clothing ||
-    swap.requested_item ||
-    swap.requestedItem ||
-    swap.reciever_item;
-
+  const requestedItem = {
+    title: swap.reciever_item_title,
+    brand: swap.reciever_item_brand,
+    size: swap.reciever_item_size,
+    condition: swap.reciever_item_condition,
+  }
   const swapDate =
     swap.swap_date || swap.date || swap.created_at || swap.updated_at;
 
@@ -117,7 +137,7 @@ function SwapHistoryCard({ swap }) {
         {swapDate ? (
           <div className="mt-4 inline-flex items-center gap-2 text-xs text-slate-400">
             <CalendarDays size={14} />
-            <span>{swapDate}</span>
+            <span>{new Date(swapDate).toLocaleDateString("en-IN", {day: "numeric",month: "short",year: "numeric",})}</span>
           </div>
         ) : null}
       </div>
@@ -132,7 +152,6 @@ function SwapHistoryCard({ swap }) {
 
           <ClothingItem item={requestedItem} />
         </div>
-
         {swap.message ? (
           <div className="flex gap-3 rounded-2xl bg-slate-50 p-4">
             <MessageSquare
@@ -159,11 +178,37 @@ function SwapHistoryCard({ swap }) {
   );
 }
 
-export default function SwapHistory({
-  history,
-  activeFilter,
-  onFilterChange,
-}) {
+export default function SwapHistory() {
+  const [history,setHistory] = useState([]);
+  const [activeFilter,setActiveFilter] = useState("all");
+  const [loading,setLoading] = useState(true);
+  const user = JSON.parse(localStorage.getItem("user") || "null");
+  useEffect(()=>{
+    const loadHistory = async()=>{
+      try{
+        setLoading(true);
+        const [sendResponse,recievedResponse]=await Promise.all([
+          getSentRequests(),
+          getRecievedRequests()
+        ]);
+        const sent = sendResponse.data?.requests || [];
+        const recieved = recievedResponse.data?.requests || [];
+        const combined = [...sent,...recieved,];
+        const uniqueHistory = Array.from(
+          new Map(
+            combined.map((swap)=>[swap.id,swap])
+          ).values()
+        );
+        setHistory(uniqueHistory);
+      }catch(error){
+        console.error("LOAD SWAP HISTORY ERROR:",error);
+        toast.error(error.response?.data?.message || "Failed to load swap history");
+      }finally{
+        setLoading(false);
+      }
+    };
+    loadHistory();
+  },[]);
   const filteredHistory =
     activeFilter === "all"
       ? history || []
@@ -190,9 +235,25 @@ export default function SwapHistory({
       icon: <XCircle size={16} />,
     },
   ];
-
+  if (loading) {
   return (
     <DashboardLayout>
+      <main className="min-h-full bg-slate-50 px-4 py-6 sm:px-6 lg:px-8">
+        <div className="flex min-h-[60vh] items-center justify-center">
+          <div className="text-center">
+            <div className="mx-auto h-10 w-10 animate-spin rounded-full border-4 border-emerald-200 border-t-emerald-600" />
+
+            <p className="mt-4 text-sm font-semibold text-slate-500">
+              Loading swap history...
+            </p>
+          </div>
+        </div>
+      </main>
+    </DashboardLayout>
+  );
+  }
+  return (
+    <DashboardLayout user={user} showNavbar={true}>
       <main className="min-h-full bg-slate-50 px-4 py-6 sm:px-6 lg:px-8">
         <div className="mx-auto max-w-7xl">
           <div className="mb-8 flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
@@ -220,7 +281,7 @@ export default function SwapHistory({
                   <button
                     key={filter.key}
                     type="button"
-                    onClick={() => onFilterChange?.(filter.key)}
+                    onClick={() => setActiveFilter(filter.key)}
                     className={`inline-flex flex-1 items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-bold transition sm:flex-none ${
                       isActive
                         ? "bg-emerald-600 text-white shadow-sm"
@@ -253,9 +314,9 @@ export default function SwapHistory({
             </section>
           ) : (
             <section className="grid gap-5 xl:grid-cols-2">
-              {filteredHistory.map((swap) => (
+              {filteredHistory.map((swap,index) => (
                 <SwapHistoryCard
-                  key={swap.id || swap.swap_id}
+                  key={swap.id ?? swap.swap_id ?? `swap-${index}`}
                   swap={swap}
                 />
               ))}
