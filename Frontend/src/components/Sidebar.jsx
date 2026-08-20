@@ -38,7 +38,7 @@ export default function Sidebar(){
   };
     return(
     <>
-      <aside className="fixed top-0 left-0 z-50 h-screen w-72 bg-white border-r border-slate-200 flex flex-col">
+      <aside className="fixed top-0 left-0 z-50 hidden h-screen w-72 flex-col border-r border-slate-200 bg-white md:flex">
         <div className="flex h-20 items-center gap-3 border-b border-slate-100 px-7">
           <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-emerald-500 text-xl text-white shadow-lg shadow-emerald-200">
             ♻

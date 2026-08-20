@@ -121,7 +121,11 @@ exports.createSwapRequest = async(req,res)=>{
         message || null,
       ]
     );
-
+    const swapRequest = result.rows[0];
+    await pool.query(
+      `INSERT INTO chats (swap_request_id)
+      VALUES ($1)`,[swapRequest.id]
+    );
     res.status(201).json({
       success: true,
       message: "Swap request sent successfully",

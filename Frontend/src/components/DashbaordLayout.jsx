@@ -7,24 +7,19 @@ export default function DashboardLayout({
   showNavbar = true,
 }) {
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="min-h-screen overflow-x-hidden bg-slate-50">
 
-      {/* Fixed Sidebar */}
       <Sidebar user={user} />
 
-      {/* Main application area */}
-      <div className="min-h-screen lg:ml-72">
+      <div className="min-h-screen min-w-0 md:ml-72">
 
-        {/* Navbar */}
         {showNavbar && <Navbar user={user} />}
 
-        {/* Page */}
-        <main>
+        <main className="min-w-0">
           {children}
         </main>
 
       </div>
-
     </div>
   );
 }

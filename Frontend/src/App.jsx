@@ -12,6 +12,7 @@ import BrowseClothes from "./pages/Customer/BrowseClothes";
 import ClothingDetails from "./pages/Customer/ClothingDetails";
 import SwapRequests from "./pages/Cloth Swaping pages/SwapingRequests";
 import SwapHistory from "./pages/Cloth Swaping pages/SwapingHistory";
+import Messages from "./pages/Common/Messages";
 function App() {
   return (
     <BrowserRouter>
@@ -29,6 +30,7 @@ function App() {
         <Route path="/clothing/:id" element={<ClothingDetails/>}/>
         <Route path="/swap-requests" element={<SwapRequests/>}/>
         <Route path="/history" element={<SwapHistory/>}/>
+        <Route path="/messages" element={<Messages/>}/>
       </Routes>
     </BrowserRouter>
   );
