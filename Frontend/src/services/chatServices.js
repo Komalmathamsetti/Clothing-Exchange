@@ -25,3 +25,11 @@ export const createChat = (swap_request_id)=>{
         swap_request_id,
     });
 };
+export const editMessage = (messageId,message)=>{
+    return API.put(`/messages/${messageId}`,{
+        message,
+    });
+};
+export const deleteMessage = (messageId)=>{
+    return API.delete(`/messages/${messageId}`);
+};

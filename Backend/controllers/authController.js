@@ -71,10 +71,7 @@ exports.loginUser = async(req,res)=>{
          id:user.rows[0].id,
          role:user.rows[0].role
         },
-        process.env.JWT_SECRET,
-        {
-            expiresIn:"1d"
-        }
+        process.env.JWT_SECRET
     );
     res.status(200).json({
         success: true,

@@ -7,11 +7,13 @@ import {
 import toast from "react-hot-toast";
 import {io} from "socket.io-client";
 import DashboardLayout from "../../components/DashbaordLayout";
-
+import Swal from "sweetalert2";
 import {
   getMyChats,
   getChatMessages,
   sendMessage,
+  editMessage,
+  deleteMessage
 } from "../../services/chatServices";
 
 export default function Messages() {
@@ -23,6 +25,9 @@ export default function Messages() {
   const [loadingChats, setLoadingChats] = useState(true);
   const [loadingMessages, setLoadingMessages] = useState(false);
   const [sending, setSending] = useState(false);
+  const [editingMessageId,setEditingMessageId] = useState(null);
+  const [editingText,setEditingText] = useState("");
+  const [actionLoading,setActionLoading] = useState(false);
   const [user] = useState(()=>{
     const storedUser = localStorage.getItem("user");
     return storedUser?JSON.parse(storedUser):null;
@@ -52,11 +57,10 @@ export default function Messages() {
   if (!socketRef.current || !selectedChat) {
     return;
   }
+
   const handleNewMessage = (newMessage) => {
-    console.log(
-      "REAL TIME MESSAGE:",
-      newMessage
-    );
+    console.log("REAL TIME MESSAGE:", newMessage);
+
     if (
       Number(newMessage.chat_id) !==
       Number(selectedChat.chat_id)
@@ -68,8 +72,7 @@ export default function Messages() {
       // Prevent duplicates
       if (
         previousMessages.some(
-          (item) =>
-            item.id === newMessage.id
+          (item) => item.id === newMessage.id
         )
       ) {
         return previousMessages;
@@ -82,18 +85,90 @@ export default function Messages() {
     });
   };
 
+  const handleMessageUpdated = (updatedMessage) => {
+    console.log(
+      "REAL TIME MESSAGE UPDATED:",
+      updatedMessage
+    );
+
+    if (
+      Number(updatedMessage.chat_id) !==
+      Number(selectedChat.chat_id)
+    ) {
+      return;
+    }
+
+    setMessages((previousMessages) =>
+      previousMessages.map((item) =>
+        Number(item.id) ===
+        Number(updatedMessage.id)
+          ? updatedMessage
+          : item
+      )
+    );
+  };
+
+  const handleMessageDeleted = (deletedMessage) => {
+    console.log(
+      "REAL TIME MESSAGE DELETED:",
+      deletedMessage
+    );
+
+    if (
+      Number(deletedMessage.chat_id) !==
+      Number(selectedChat.chat_id)
+    ) {
+      return;
+    }
+
+    setMessages((previousMessages) =>
+      previousMessages.map((item) =>
+        Number(item.id) ===
+        Number(deletedMessage.id)
+          ? {
+              ...item,
+              is_deleted: true,
+              message: "",
+            }
+          : item
+      )
+    );
+  };
+
+  // Register all socket events
   socketRef.current.on(
     "new_message",
     handleNewMessage
   );
 
+  socketRef.current.on(
+    "message_updated",
+    handleMessageUpdated
+  );
+
+  socketRef.current.on(
+    "message_deleted",
+    handleMessageDeleted
+  );
+
+  // Cleanup
   return () => {
     socketRef.current.off(
       "new_message",
       handleNewMessage
     );
+
+    socketRef.current.off(
+      "message_updated",
+      handleMessageUpdated
+    );
+
+    socketRef.current.off(
+      "message_deleted",
+      handleMessageDeleted
+    );
   };
-  }, [selectedChat]);
+}, [selectedChat]);
   // =====================================================
   // LOAD CHATS
   // =====================================================
@@ -229,6 +304,55 @@ export default function Messages() {
     );
   } finally {
     setSending(false);
+  }
+};
+const handleEditMessage = async(messageId)=>{
+  const trimmedText = editingText.trim();
+  if(!trimmedText){
+    toast.error("Message cannot be empty");
+    return;
+  }
+  try{
+    setActionLoading(true);
+    await editMessage(messageId,trimmedText);
+    setEditingMessageId(null);
+    setEditingText("");
+    toast.success("Message Edited");
+  }catch(error){
+    console.error("EDIT MESSAGE ERROR:", error);
+    toast.error(error.response?.data?.message || "Failed to edit message");
+  }finally{
+    setActionLoading(false);
+  }
+};
+const handleDeleteMessage = async (messageId) => {
+   const result = await Swal.fire({
+    title: "Delete message?",
+    text: "Are you sure you want to delete this message?",
+    icon: "warning",
+    showCancelButton: true,
+    confirmButtonColor: "#ef4444",
+    cancelButtonColor: "#64748b",
+    confirmButtonText: "Yes, delete it",
+    cancelButtonText: "Cancel",
+    reverseButtons: true,
+  });
+  if(!result.isConfirmed){
+    return;
+  }
+  try {
+    setActionLoading(true);
+    await deleteMessage(messageId);
+    // Socket.IO will remove/update the message
+    toast.success("Message deleted");
+  } catch (error) {
+    console.error("DELETE MESSAGE ERROR:", error);
+    toast.error(
+      error.response?.data?.message ||
+        "Failed to delete message"
+    );
+  } finally {
+    setActionLoading(false);
   }
 };
   const formatTime = (date) => {
@@ -495,47 +619,78 @@ export default function Messages() {
                       <div className="space-y-3">
 
                         {messages.map((item) => {
-
-                          const isMine =
-                            Number(item.sender_id) ===
-                            Number(currentUserId);
-
-                          return (
-                            <div
-                              key={item.id}
-                              className={`flex ${
-                                isMine
-                                  ? "justify-end"
-                                  : "justify-start"
-                              }`}
-                            >
-                              <div
-                                className={`max-w-[85%] wrap-break-word rounded-2xl px-4 py-3 shadow-sm sm:max-w-[75%] ${
-                                  isMine
-                                    ? "rounded-br-md bg-emerald-600 text-white"
-                                    : "rounded-bl-md bg-white text-slate-700"
-                                }`}
-                              >
-                                <p className="text-sm leading-6">
-                                  {item.message}
-                                </p>
-
-                                <p
-                                  className={`mt-1 text-[10px] ${
-                                    isMine
-                                      ? "text-emerald-100"
-                                      : "text-slate-400"
-                                  }`}
-                                >
-                                  {formatTime(
-                                    item.created_at
+                          const isMine = Number(item.sender_id) === Number(currentUserId);
+                          const isEditing = editingMessageId === item.id;
+                          const isDeleted = item.is_deleted === true;
+                          return (<div key={item.id} className={`flex ${isMine ? "justify-end" : "justify-start"}`}>
+                            <div className="group relative max-w-[85%] sm:max-w-[75%]">
+                              {/* MESSAGE BUBBLE */}
+                              <div className={`wrap-break-word rounded-2xl px-4 py-3 shadow-sm ${
+                                isMine ? "rounded-br-md bg-emerald-600 text-white" : "rounded-bl-md bg-white text-slate-700"}`}>
+                                  {/* DELETED MESSAGE */}
+                                  {isDeleted ? (
+                                    <p className="text-sm italic opacity-70">
+                                      This message was deleted
+                                    </p>
+                                    ) : isEditing ? (
+                                      /* EDIT MODE */
+                                    <div className="space-y-2">
+                                      <textarea value={editingText}
+                                      onChange={(e) => setEditingText(e.target.value)} rows={2} autoFocus
+                                      className="w-full resize-none rounded-lg border border-white/40 bg-white/10 px-3 py-2 text-sm text-white outline-none"/>
+                                      <div className="flex justify-end gap-2">
+                                        <button type="button" onClick={() => { 
+                                          setEditingMessageId(null);
+                                          setEditingText("");
+                                        }}className="rounded-lg px-3 py-1.5 text-xs font-semibold text-emerald-100 hover:bg-white/10">
+                                          Cancel
+                                        </button>
+                                        <button type="button" disabled={actionLoading} onClick={() =>
+                                          handleEditMessage(item.id)
+                                        }className="rounded-lg bg-white px-3 py-1.5 text-xs font-semibold text-emerald-700 hover:bg-emerald-50 disabled:opacity-50">
+                                          {actionLoading ? "Saving..." : "Save"}
+                                        </button>
+                                      </div>
+                                    </div>
+                                    ) : (
+                                      /* NORMAL MESSAGE */
+                                      <p className="text-sm leading-6">
+                                        {item.message}
+                                      </p>
+                                    )}
+                                    {/* TIME + EDITED */}
+                                    {!isDeleted && !isEditing && (
+                                      <div className="mt-1 flex items-center gap-1">
+                                        <p className={`text-[10px] ${isMine ? "text-emerald-100" : "text-slate-400"}`}>
+                                          {formatTime(item.created_at)}
+                                        </p>
+                                      {item.updated_at && new Date(item.updated_at).getTime() > new Date(item.created_at).getTime() && (
+                                        <span className={`text-[10px] ${isMine ? "text-emerald-100" : "text-slate-400"}`}>
+                                          · edited
+                                        </span>
+                                      )}
+                                      </div>
+                                    )}
+                                  </div>
+                                  {/* EDIT / DELETE BUTTONS */}
+                                  {isMine && !isDeleted && !isEditing && (
+                                    <div className="absolute -top-8 right-0 hidden items-center gap-1 rounded-lg border border-slate-200 bg-white p-1 shadow-md group-hover:flex">
+                                      <button type="button" disabled={actionLoading} onClick={() => {
+                                        setEditingMessageId(item.id);
+                                        setEditingText(item.message);
+                                      }}className="rounded-md px-2 py-1 text-xs font-semibold text-slate-600 hover:bg-slate-100 hover:text-emerald-700">
+                                        Edit
+                                      </button>
+                                      <button type="button" disabled={actionLoading} onClick={() =>handleDeleteMessage(item.id)}
+                                      className="rounded-md px-2 py-1 text-xs font-semibold text-slate-600 hover:bg-rose-50 hover:text-rose-600">
+                                        Delete
+                                      </button>
+                                    </div>
                                   )}
-                                </p>
-                              </div>
-                            </div>
-                          );
-                        })}
-
+                                  </div>
+                                  </div>
+                                  );
+                                })}
                         <div ref={messagesEndRef} />
 
                       </div>

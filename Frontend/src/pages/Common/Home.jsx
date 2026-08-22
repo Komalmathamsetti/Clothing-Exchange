@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
-import { Link,useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
+import Swal from "sweetalert2";
 const features = [
   {
     icon: "♻️",
@@ -107,34 +108,168 @@ function ArrowIcon() {
 
 export default function Home() {
   const [menuOpen, setMenuOpen] = useState(false);
+  const [profileOpen, setProfileOpen] = useState(false);
   const navigate = useNavigate();
+  const [user, setUser] = useState(() => {
+    const storedUser = localStorage.getItem("user");
+
+    if (!storedUser) {
+      return null;
+    }
+    try {
+      return JSON.parse(storedUser);
+    } catch (error) {
+      console.error("Invalid user data:", error);
+      localStorage.removeItem("user");
+      return null;
+    }
+  });
+  const handleLogout = async () => {
+    const result = await Swal.fire({
+      title: "Logout?",
+      text: "Are you sure you want to logout?",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonColor: "#10b981",
+      cancelButtonColor: "#ef4444",
+      confirmButtonText: "Yes, Logout",
+      cancelButtonText: "Cancel",
+    });
+
+    if (!result.isConfirmed) {
+      return;
+    }
+
+    localStorage.removeItem("token");
+    localStorage.removeItem("user");
+
+    setUser(null);
+    setProfileOpen(false);
+
+    await Swal.fire({
+      icon: "success",
+      title: "Logged Out",
+      text: "You have been logged out successfully.",
+      timer: 1200,
+      showConfirmButton: false,
+    });
+  };
+  const handleDashboard = () => {
+    if (!user) {
+      navigate("/login");
+      return;
+    }
+
+    const role = String(user.role || user.user_role || "").toUpperCase();
+
+    if (role === "ADMIN") {
+      navigate("/admin-dashboard");
+    } else {
+      navigate("/dashboard");
+    }
+
+    setProfileOpen(false);
+  };
+  const handleBrowseClothes = () => {
+    if (!user) {
+      navigate("/login");
+      return;
+    }
+
+    navigate("/browse-clothes");
+  };
   return (
     <div className="min-h-screen overflow-hidden bg-white text-slate-900">
       <nav className="sticky top-0 z-50 border-b border-slate-200/70 bg-white/80 backdrop-blur-xl">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4 lg:px-8">
-          <a href="#home" className="flex items-center gap-2 text-xl font-bold tracking-tight">
+          <Link
+            to="/"
+            className="flex items-center gap-2 text-xl font-bold tracking-tight"
+          >
             <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-500 text-lg text-white shadow-lg shadow-emerald-500/20">
               ✦
             </span>
             Cloth<span className="text-emerald-500">Swap</span>
-          </a>
-
+          </Link>
           <div className="hidden items-center gap-8 text-sm font-medium text-slate-600 lg:flex">
-            <Link className="transition hover:text-emerald-500" to="#home">Home</Link>
-            <Link className="transition hover:text-emerald-500" to="#browse">Browse Clothes</Link>
-            <Link className="transition hover:text-emerald-500" to="#about">About</Link>
-            <Link className="transition hover:text-emerald-500" to="#how-it-works">How It Works</Link>
+            <Link className="transition hover:text-emerald-500" to="/">
+              Home
+            </Link>
+            <button
+              type="button"
+              onClick={handleBrowseClothes}
+              className="transition hover:text-emerald-500 cursor-pointer"
+            >
+              Browse Clothes
+            </button>
+            <Link className="transition hover:text-emerald-500" to="#about">
+              About
+            </Link>
+            <Link
+              className="transition hover:text-emerald-500"
+              to="#how-it-works"
+            >
+              How It Works
+            </Link>
           </div>
-
           <div className="hidden items-center gap-3 lg:flex">
-            <button onClick={()=>navigate("/login")} className="rounded-full px-5 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-100 cursor-pointer">
-              Login
-            </button>
-            <button onClick={()=>navigate("/register")} className="rounded-full bg-slate-900 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-slate-900/20 transition hover:-translate-y-0.5 hover:bg-emerald-600 cursor-pointer">
-              Register
-            </button>
+            {!user ? (
+              <>
+                <button
+                  type="button"
+                  onClick={() => navigate("/login")}
+                  className="rounded-full px-5 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-100 cursor-pointer"
+                >
+                  Login
+                </button>
+                <button
+                  type="button"
+                  onClick={() => navigate("/register")}
+                  className="rounded-full bg-slate-900 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-slate-900/20 transition hover:-translate-y-0.5 hover:bg-emerald-600 cursor-pointer"
+                >
+                  Register
+                </button>
+              </>
+            ) : (
+              <div className="relative">
+                <button
+                  type="button"
+                  onClick={() => setProfileOpen(!profileOpen)}
+                  className="flex h-11 w-11 items-center justify-center rounded-full bg-emerald-500 text-lg font-bold text-white shadow-lg shadow-emerald-500/20 hover:bg-emerald-600 cursor-pointer"
+                >
+                  {(user.full_name || user.name || "User")
+                    .charAt(0)
+                    .toUpperCase()}
+                </button>
+                {profileOpen && (
+                  <div className="absolute right-0 top-14 z-50 w-48 rounded-2xl border border-slate-200 bg-white p-2 shadow-xl">
+                    <div className="border-b border-slate-100 px-3 py-3">
+                      <p className="truncate text-sm font-bold text-slate-900">
+                        {user.full_name || user.name || "User"}
+                      </p>
+                      <p className="text-xs text-slate-400">
+                        {user.role || user.user_role || "CUSTOMER"}
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleDashboard}
+                      className="mt-1 flex w-full rounded-xl px-3 py-2.5 text-left text-sm font-medium text-slate-600 hover:bg-emerald-50 hover:text-emerald-700"
+                    >
+                      📊 Dashboard
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleLogout}
+                      className="flex w-full rounded-xl px-3 py-2.5 text-left text-sm font-medium text-slate-600 hover:bg-red-50 hover:text-red-600"
+                    >
+                      🚪 Logout
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
-
           <button
             aria-label="Toggle navigation"
             className="rounded-lg p-2 text-slate-700 lg:hidden"
@@ -146,21 +281,89 @@ export default function Home() {
         {menuOpen && (
           <div className="border-t border-slate-200 bg-white px-6 py-5 lg:hidden">
             <div className="flex flex-col gap-4 text-sm font-medium text-slate-600">
-              <Link to="/" onClick={() => setMenuOpen(false)}>Home</Link>
-              <Link to="#browse" onClick={() => setMenuOpen(false)}>Browse Clothes</Link>
-              <Link to="#about" onClick={() => setMenuOpen(false)}>About</Link>
-              <Link to="#how-it-works" onClick={() => setMenuOpen(false)}>How It Works</Link>
-              <button onClick={()=>navigate("/login")} className="rounded-full px-5 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-100 cursor-pointer">
-                Login
+              <Link to="/" onClick={() => setMenuOpen(false)}>
+                Home
+              </Link>
+              <button type="button" onClick={handleBrowseClothes}>
+                Browse Clothes
               </button>
-              <button onClick={()=>navigate("/register")} className="rounded-full bg-slate-900 px-5 py-3 font-semibold text-white cursor-pointer">
-                Register
-              </button>
+              <Link to="#about" onClick={() => setMenuOpen(false)}>
+                About
+              </Link>
+              <Link to="#how-it-works" onClick={() => setMenuOpen(false)}>
+                How It Works
+              </Link>
+              {!user ? (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      navigate("/login");
+                      setMenuOpen(false);
+                    }}
+                    className="rounded-full px-5 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-100"
+                  >
+                    Login
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      navigate("/register");
+                      setMenuOpen(false);
+                    }}
+                    className="rounded-full bg-slate-900 px-5 py-3 font-semibold text-white"
+                  >
+                    Register
+                  </button>
+                </>
+              ) : (
+                <>
+                  <div className="flex items-center gap-3 rounded-2xl bg-emerald-50 p-3">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-emerald-500 font-bold text-white">
+                      {(user.full_name || user.name || "User")
+                        .charAt(0)
+                        .toUpperCase()}
+                    </div>
+
+                    <div>
+                      <p className="text-sm font-bold text-slate-900">
+                        {user.full_name || user.name || "User"}
+                      </p>
+
+                      <p className="text-xs text-slate-500">
+                        {user.role || user.user_role || "CUSTOMER"}
+                      </p>
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      handleDashboard();
+                      setMenuOpen(false);
+                    }}
+                    className="rounded-full bg-emerald-50 px-5 py-3 text-left font-semibold text-emerald-700"
+                  >
+                    📊 Dashboard
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      handleLogout();
+                      setMenuOpen(false);
+                    }}
+                    className="rounded-full bg-red-50 px-5 py-3 text-left font-semibold text-red-600"
+                  >
+                    🚪 Logout
+                  </button>
+                </>
+              )}
             </div>
           </div>
         )}
       </nav>
-
       <main>
         <section
           id="home"
@@ -191,13 +394,14 @@ export default function Home() {
                   Get Started
                   <ArrowIcon />
                 </button>
-                <Link
-                  to="#browse"
+                <button
+                  type="button"
+                  onClick={handleBrowseClothes}
                   className="inline-flex items-center gap-2 rounded-full px-5 py-3.5 text-sm font-bold text-slate-700 transition hover:bg-white hover:text-emerald-600"
                 >
                   Browse Clothes
                   <ArrowIcon />
-                </Link>
+                </button>
               </div>
 
               <div className="mt-10 flex items-center gap-3 text-sm text-slate-500">
@@ -224,7 +428,9 @@ export default function Home() {
 
               <div className="relative z-10 flex items-center text-[7rem] drop-shadow-2xl sm:text-[10rem]">
                 <span>👩🏽‍🦱</span>
-                <span className="-mx-4 rounded-3xl bg-white p-4 text-5xl shadow-2xl sm:text-6xl">👕</span>
+                <span className="-mx-4 rounded-3xl bg-white p-4 text-5xl shadow-2xl sm:text-6xl">
+                  👕
+                </span>
                 <span>🧑🏻‍🦰</span>
               </div>
 
@@ -247,12 +453,15 @@ export default function Home() {
               <h2 className="text-4xl font-bold tracking-tighter text-slate-950 sm:text-6xl">
                 A better way to
                 <br />
-                <span className="font-serif italic text-emerald-500">refresh your style.</span>
+                <span className="font-serif italic text-emerald-500">
+                  refresh your style.
+                </span>
               </h2>
             </div>
             <p className="max-w-md text-lg leading-8 text-slate-500">
               Every swap is a small step toward a cleaner planet. Discover
-              clothes you love, meet like-minded people, and make fashion more circular.
+              clothes you love, meet like-minded people, and make fashion more
+              circular.
             </p>
           </div>
 
@@ -264,8 +473,12 @@ export default function Home() {
               >
                 <div className="mb-12 text-3xl">{feature.icon}</div>
                 <h3 className="text-lg font-bold">{feature.title}</h3>
-                <p className="mt-3 text-sm leading-6 text-slate-500">{feature.text}</p>
-                <div className="mt-6 text-right text-xl text-emerald-500 transition group-hover:translate-x-1">↗</div>
+                <p className="mt-3 text-sm leading-6 text-slate-500">
+                  {feature.text}
+                </p>
+                <div className="mt-6 text-right text-xl text-emerald-500 transition group-hover:translate-x-1">
+                  ↗
+                </div>
               </article>
             ))}
           </div>
@@ -279,18 +492,30 @@ export default function Home() {
                   Simple by design
                 </p>
                 <h2 className="text-4xl font-bold tracking-tighter sm:text-6xl">
-                  How it <span className="font-serif italic text-emerald-500">works</span>
+                  How it{" "}
+                  <span className="font-serif italic text-emerald-500">
+                    works
+                  </span>
                 </h2>
               </div>
-              <p className="max-w-sm text-slate-500">From closet to community in four easy steps.</p>
+              <p className="max-w-sm text-slate-500">
+                From closet to community in four easy steps.
+              </p>
             </div>
 
             <div className="mt-14 grid gap-8 md:grid-cols-4">
               {steps.map(([number, title, text]) => (
-                <article key={number} className="border-t border-slate-300 pt-6">
-                  <span className="text-sm font-bold text-emerald-600">{number}</span>
+                <article
+                  key={number}
+                  className="border-t border-slate-300 pt-6"
+                >
+                  <span className="text-sm font-bold text-emerald-600">
+                    {number}
+                  </span>
                   <h3 className="mt-8 text-lg font-bold">{title}</h3>
-                  <p className="mt-3 text-sm leading-6 text-slate-500">{text}</p>
+                  <p className="mt-3 text-sm leading-6 text-slate-500">
+                    {text}
+                  </p>
                 </article>
               ))}
             </div>
@@ -304,18 +529,26 @@ export default function Home() {
                 Find your next favorite
               </p>
               <h2 className="text-4xl font-bold tracking-tighter sm:text-6xl">
-                Browse by <span className="font-serif italic text-emerald-500">category</span>
+                Browse by{" "}
+                <span className="font-serif italic text-emerald-500">
+                  category
+                </span>
               </h2>
             </div>
-            <a href="#browse" className="font-bold text-slate-700 hover:text-emerald-600">
+            <button
+              type="button"
+              onClick={handleBrowseClothes}
+              className="font-bold text-slate-700 hover:text-emerald-600"
+            >
               View all clothes ↗
-            </a>
+            </button>
           </div>
 
           <div className="mt-14 grid grid-cols-2 gap-4 sm:grid-cols-4">
             {categories.map(([name, icon]) => (
-              <Link
-                to="#browse"
+              <button
+                type="button"
+                onClick={handleBrowseClothes}
                 key={name}
                 className="group overflow-hidden rounded-3xl border border-slate-200 bg-white transition duration-300 hover:-translate-y-2 hover:shadow-xl"
               >
@@ -328,7 +561,7 @@ export default function Home() {
                     Explore swaps ↗
                   </span>
                 </div>
-              </Link>
+              </button>
             ))}
           </div>
         </section>
@@ -349,7 +582,9 @@ export default function Home() {
           <h2 className="text-4xl font-bold tracking-tighter sm:text-6xl">
             Real people.
             <br />
-            <span className="font-serif italic text-emerald-500">Real impact.</span>
+            <span className="font-serif italic text-emerald-500">
+              Real impact.
+            </span>
           </h2>
 
           <div className="mt-14 grid gap-5 md:grid-cols-3">
@@ -358,15 +593,21 @@ export default function Home() {
                 key={review.name}
                 className="rounded-3xl border border-slate-200 bg-white p-7 shadow-sm"
               >
-                <div className="text-lg tracking-widest text-amber-400">★★★★★</div>
-                <p className="mt-6 min-h-28 text-lg leading-8 text-slate-600">“{review.text}”</p>
+                <div className="text-lg tracking-widest text-amber-400">
+                  ★★★★★
+                </div>
+                <p className="mt-6 min-h-28 text-lg leading-8 text-slate-600">
+                  “{review.text}”
+                </p>
                 <div className="mt-7 flex items-center gap-3">
                   <div className="flex h-10 w-10 items-center justify-center rounded-full bg-emerald-100 text-xs font-bold text-emerald-700">
                     {review.initials}
                   </div>
                   <div>
                     <strong className="block text-sm">{review.name}</strong>
-                    <span className="text-xs text-slate-500">Verified member</span>
+                    <span className="text-xs text-slate-500">
+                      Verified member
+                    </span>
                   </div>
                 </div>
               </article>
@@ -394,13 +635,12 @@ export default function Home() {
               </p>
 
               <div className="mt-8 flex flex-wrap gap-4">
-                <button onClick={()=>navigate("/register")} className="inline-flex items-center gap-3 rounded-full bg-slate-900 px-6 py-3.5 text-sm font-bold text-white shadow-xl shadow-slate-900/20 transition hover:-translate-y-1 hover:bg-emerald-600">
+                <button
+                  onClick={() => navigate("/register")}
+                  className="inline-flex items-center gap-3 rounded-full bg-slate-900 px-6 py-3.5 text-sm font-bold text-white shadow-xl shadow-slate-900/20 transition hover:-translate-y-1 hover:bg-emerald-600"
+                >
                   Register Now
                   <ArrowIcon />
-                </button>
-
-                <button onClick={()=>navigate("/login")} className="rounded-full border border-slate-300 bg-white px-6 py-3.5 text-sm font-bold text-slate-700 transition hover:-translate-y-1 hover:border-emerald-500 hover:text-emerald-600">
-                  Login
                 </button>
               </div>
             </div>
@@ -441,16 +681,23 @@ export default function Home() {
           <div>
             <h3 className="font-bold text-slate-900">Quick Links</h3>
             <div className="mt-5 flex flex-col gap-3 text-sm text-slate-500">
-              <Link className="transition hover:text-emerald-600" href="#browse">
+              <button
+                type="button"
+                onClick={handleBrowseClothes}
+                className="transition hover:text-emerald-600"
+              >
                 Browse Clothes
-              </Link>
-              <Link className="transition hover:text-emerald-600" href="#how-it-works">
+              </button>
+              <Link
+                className="transition hover:text-emerald-600"
+                to="/how-it-works"
+              >
                 How It Works
               </Link>
-              <Link className="transition hover:text-emerald-600" href="#about">
+              <Link className="transition hover:text-emerald-600" to="/about">
                 About Us
               </Link>
-              <Link className="transition hover:text-emerald-600" href="#home">
+              <Link className="transition hover:text-emerald-600" to="/">
                 Sustainability
               </Link>
             </div>

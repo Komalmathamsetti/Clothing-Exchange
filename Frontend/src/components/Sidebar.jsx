@@ -50,7 +50,8 @@ export default function Sidebar(){
         </div>
 
         <nav className="flex-1 space-y-1 px-4 py-6">
-          <NavLink to="/dashboard" className={navClass}>🏠 Dashboard</NavLink>
+          <NavLink to="/" className={navClass}>🏠 Home</NavLink>
+          <NavLink to="/dashboard" className={navClass}>📊 Dashboard</NavLink>
           <NavLink to="/profile" className={navClass}>👤 My Profile</NavLink>
           <NavLink to="/add-clothing" className={navClass}>👕 Add Clothing</NavLink>
           <NavLink to="/my-listings" className={navClass}>📦 My Listings</NavLink>

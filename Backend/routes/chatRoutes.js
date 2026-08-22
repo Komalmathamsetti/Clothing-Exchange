@@ -1,9 +1,11 @@
 const express = require("express");
 const router = express.Router();
-const { createChat,getMyChats,getChatMessages,sendMessage } = require("../controllers/chatController");
+const { createChat,getMyChats,getChatMessages,sendMessage,editMessage,deleteMessage } = require("../controllers/chatController");
 const { verifyToken } = require("../middleware/authMiddleware");
 router.post("/",verifyToken,createChat);
 router.get("/",verifyToken,getMyChats);
 router.get("/:chatId/messages",verifyToken,getChatMessages);
 router.post("/:chatId/messages",verifyToken,sendMessage);
+router.put("/messages/:messageId",verifyToken,editMessage);
+router.delete("/messages/:messageId",verifyToken,deleteMessage);
 module.exports = router;

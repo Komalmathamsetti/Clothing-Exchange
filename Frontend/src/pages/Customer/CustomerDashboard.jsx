@@ -2,22 +2,53 @@ import { useState,useEffect } from "react";
 import { Link,useNavigate } from "react-router-dom";
 import { getProfile } from "../../services/userServices";
 import DashboardLayout from "../../components/DashbaordLayout";
-import toast from "react-hot-toast";
+import { getDashboard } from "../../services/dashboardServices";
 export default function Dashboard() {
   const navigate = useNavigate();
   const [user,setUser] = useState(null);
   const [loading,setLoading] = useState(true);
-  const fetchProfile = async()=>{
-    try{
-        const response = await getProfile();
-        setUser(response.data.user);
-    }catch(error){
-       toast.error(error.response?.data?.message || "Unable to get profile");
-       navigate("/login");
-    } finally{
-        setLoading(false);
-    }
-  };
+  const [dashboard, setDashboard] = useState({
+  stats: {
+    totalListings: 0,
+    activeSwaps: 0,
+    completedSwaps: 0,
+    pendingRequests: 0,
+  },
+  recentActivity: [],
+  recentListings: [],
+  });
+  const fetchProfile = async () => {
+  try {
+    const [profileResponse, dashboardResponse] =
+      await Promise.all([
+        getProfile(),
+        getDashboard(),
+      ]);
+
+    setUser(profileResponse.data.user);
+
+    setDashboard({
+      stats: dashboardResponse.data.stats || {
+        totalListings: 0,
+        activeSwaps: 0,
+        completedSwaps: 0,
+        pendingRequests: 0,
+      },
+
+      recentActivity:
+        dashboardResponse.data.recentActivity || [],
+
+      recentListings:
+        dashboardResponse.data.recentListings || [],
+    });
+  } catch (error) {
+    console.error("DASHBOARD ERROR:", error);
+
+    navigate("/login");
+  } finally {
+    setLoading(false);
+  }
+};
   useEffect(()=>{
     const loadProfile = async()=>{
         await fetchProfile();
@@ -43,7 +74,7 @@ export default function Dashboard() {
               <p className="mt-3 text-sm leading-6 text-emerald-50 sm:text-base">
                 Manage your clothing swaps and help build a sustainable fashion community.
               </p>
-              <Link to="#" className="mt-7 inline-flex rounded-xl bg-white px-5 py-3 text-sm font-bold text-emerald-700 hover:bg-emerald-50">
+              <Link to="/add-clothing" className="mt-7 inline-flex rounded-xl bg-white px-5 py-3 text-sm font-bold text-emerald-700 hover:bg-emerald-50">
                 + Add New Clothing
               </Link>
             </div>
@@ -55,22 +86,22 @@ export default function Dashboard() {
             <div className="rounded-2xl border border-slate-200 bg-white p-5">
               <div className="flex justify-between text-2xl">📦 <span className="text-xs font-semibold text-emerald-600">+12.5%</span></div>
               <p className="mt-5 text-sm text-slate-500">Total Listings</p>
-              <p className="mt-1 text-3xl font-bold">24</p>
+              <p className="mt-1 text-3xl font-bold">{dashboard.stats.totalListings}</p>
             </div>
             <div className="rounded-2xl border border-slate-200 bg-white p-5">
               <div className="flex justify-between text-2xl">🔄 <span className="text-xs font-semibold text-emerald-600">+8.2%</span></div>
               <p className="mt-5 text-sm text-slate-500">Active Swaps</p>
-              <p className="mt-1 text-3xl font-bold">08</p>
+              <p className="mt-1 text-3xl font-bold">{dashboard.stats.activeSwaps}</p>
             </div>
             <div className="rounded-2xl border border-slate-200 bg-white p-5">
               <div className="flex justify-between text-2xl">✅ <span className="text-xs font-semibold text-emerald-600">+24.8%</span></div>
               <p className="mt-5 text-sm text-slate-500">Completed Swaps</p>
-              <p className="mt-1 text-3xl font-bold">36</p>
+              <p className="mt-1 text-3xl font-bold">{dashboard.stats.completedSwaps}</p>
             </div>
             <div className="rounded-2xl border border-slate-200 bg-white p-5">
               <div className="flex justify-between text-2xl">⏳ <span className="text-xs font-semibold text-amber-600">Needs review</span></div>
               <p className="mt-5 text-sm text-slate-500">Pending Requests</p>
-              <p className="mt-1 text-3xl font-bold">04</p>
+              <p className="mt-1 text-3xl font-bold">{dashboard.stats.pendingRequests}</p>
             </div>
           </section>
 
@@ -84,34 +115,47 @@ export default function Dashboard() {
                 <a href="#" className="text-sm font-semibold text-emerald-600">View all</a>
               </div>
 
-              <div className="mt-6 space-y-4">
-                <div className="flex items-center gap-4 rounded-2xl bg-slate-50 p-3">
-                  <div className="h-14 w-14 rounded-xl bg-linear-to-br from-orange-200 to-rose-300" />
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-semibold">Swap completed with Jamie</p>
-                    <p className="mt-1 text-xs text-slate-400">Vintage denim jacket · 2 hours ago</p>
-                  </div>
-                  <span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-700">Completed</span>
+              {dashboard.recentActivity.length === 0 ? (
+                <div className="rounded-2xl bg-slate-50 p-6 text-center text-sm text-slate-400">
+                  No recent swap activity.
                 </div>
-
-                <div className="flex items-center gap-4 rounded-2xl bg-slate-50 p-3">
-                  <div className="h-14 w-14 rounded-xl bg-linear-to-br from-sky-200 to-indigo-300" />
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-semibold">New swap request recieved</p>
-                    <p className="mt-1 text-xs text-slate-400">Linen summer shirt · 5 hours ago</p>
+              ) : (
+                dashboard.recentActivity.map((activity) => {
+                  const isReceiver = Number(activity.reciever_id) === Number(user?.id);
+                  const status = activity.status?.toUpperCase();
+                  let title = "Swap updated";
+                  if (status === "COMPLETED") {
+                    title = "Swap completed";
+                  } else if (status === "PENDING" && isReceiver) {
+                    title = "New swap request received";
+                  } else if (status === "ACCEPTED") {
+                    title = "Swap request accepted";
+                  } else if (status === "REJECTED") {
+                    title = "Swap request rejected";
+                  }
+                  const otherUser = isReceiver ? activity.sender_name : activity.reciever_name;
+                  const itemName = isReceiver ? activity.reciever_item_title : activity.sender_item_title;
+                  return (
+                  <div key={activity.id} className="flex items-center gap-4 rounded-2xl bg-slate-50 p-3">
+                    <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl bg-emerald-100 text-xl">
+                      🔄
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-semibold text-slate-800">
+                        {title}
+                        {otherUser ? ` with ${otherUser}` : ""}
+                      </p>
+                      <p className="mt-1 truncate text-xs text-slate-400">
+                        {itemName || "Clothing item"}
+                      </p>
+                    </div>
+                    <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">
+                      {status || "UNKNOWN"}
+                    </span>
                   </div>
-                  <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold text-amber-700">Pending</span>
-                </div>
-
-                <div className="flex items-center gap-4 rounded-2xl bg-slate-50 p-3">
-                  <div className="h-14 w-14 rounded-xl bg-linear-to-br from-pink-200 to-purple-300" />
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-semibold">Your listing got a like</p>
-                    <p className="mt-1 text-xs text-slate-400">Floral midi dress · Yesterday</p>
-                  </div>
-                  <span className="rounded-full bg-slate-200 px-3 py-1 text-xs font-semibold text-slate-600">Listing</span>
-                </div>
-              </div>
+                  );
+                })
+                )}
             </div>
 
             <div className="rounded-2xl border border-slate-200 bg-white p-6 xl:col-span-2">
@@ -149,7 +193,7 @@ export default function Dashboard() {
                 <h2 className="text-lg font-bold">Recent Listings</h2>
                 <p className="mt-1 text-sm text-slate-400">Manage your recently added pieces</p>
               </div>
-              <a href="#" className="text-sm font-semibold text-emerald-600">View all</a>
+              <Link to="/my-listings" className="text-sm font-semibold text-emerald-600">View all</Link>
             </div>
 
             <div className="overflow-x-auto">
@@ -166,51 +210,44 @@ export default function Dashboard() {
                 </thead>
 
                 <tbody className="divide-y divide-slate-100 text-sm">
-                  <tr>
-                    <td className="px-6 py-4"><div className="h-12 w-12 rounded-xl bg-linear-to-br from-indigo-200 to-purple-300" /></td>
-                    <td className="px-6 py-4 font-semibold">Oversized Blazer</td>
-                    <td className="px-6 py-4 text-slate-500">Outerwear</td>
-                    <td className="px-6 py-4"><span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-700">Active</span></td>
-                    <td className="px-6 py-4 text-slate-500">Brooklyn, NY</td>
-                    <td className="px-6 py-4"><a href="#" className="font-semibold text-emerald-600">View</a></td>
-                  </tr>
-
-                  <tr>
-                    <td className="px-6 py-4"><div className="h-12 w-12 rounded-xl bg-linear-to-br from-amber-200 to-orange-300" /></td>
-                    <td className="px-6 py-4 font-semibold">Classic White Shirt</td>
-                    <td className="px-6 py-4 text-slate-500">Tops</td>
-                    <td className="px-6 py-4"><span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold text-amber-700">Pending</span></td>
-                    <td className="px-6 py-4 text-slate-500">Manhattan, NY</td>
-                    <td className="px-6 py-4"><a href="#" className="font-semibold text-emerald-600">View</a></td>
-                  </tr>
-
-                  <tr>
-                    <td className="px-6 py-4"><div className="h-12 w-12 rounded-xl bg-linear-to-br from-pink-200 to-rose-300" /></td>
-                    <td className="px-6 py-4 font-semibold">Floral Midi Dress</td>
-                    <td className="px-6 py-4 text-slate-500">Dresses</td>
-                    <td className="px-6 py-4"><span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-700">Active</span></td>
-                    <td className="px-6 py-4 text-slate-500">Queens, NY</td>
-                    <td className="px-6 py-4"><a href="#" className="font-semibold text-emerald-600">View</a></td>
-                  </tr>
-                  <tr>
-                    <td className="px-6 py-4">
-                      <div className="h-12 w-12 rounded-xl bg-linear-to-br from-sky-200 to-cyan-300" />
-                    </td>
-                    <td className="px-6 py-4 font-semibold">Relaxed Denim Jeans</td>
-                    <td className="px-6 py-4 text-slate-500">Bottoms</td>
-                    <td className="px-6 py-4">
-                      <span className="rounded-full bg-slate-200 px-3 py-1 text-xs font-semibold text-slate-600">
-                        Draft
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 text-slate-500">Jersey City, NJ</td>
-                    <td className="px-6 py-4">
-                      <a href="#" className="font-semibold text-emerald-600">
-                        Edit
-                      </a>
-                    </td>
-                  </tr>
-                </tbody>
+                  {dashboard.recentListings.length === 0 ? (
+                    <tr>
+                      <td colSpan="6" className="px-6 py-10 text-center text-slate-400">
+                        No clothing listings found.
+                      </td>
+                    </tr>
+                    ) : (
+                      dashboard.recentListings.map((item) => (
+                      <tr key={item.id}>
+                        <td className="px-6 py-4">
+                          <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-emerald-100 text-xl">
+                            👕
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 font-semibold text-slate-800">
+                          {item.title}
+                        </td>
+                        <td className="px-6 py-4 text-slate-500">
+                          {item.category_name || "Not specified"}
+                        </td>
+                        <td className="px-6 py-4">
+                          <span className={`rounded-full px-3 py-1 text-xs font-semibold ${
+                            item.status === "AVAILABLE" ? "bg-emerald-100 text-emerald-700" : "bg-slate-200 text-slate-600"}`}>
+                              {item.status}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 text-slate-500">
+                          {item.city}, {item.state}
+                        </td>
+                        <td className="px-6 py-4">
+                          <Link to={`/clothing/${item.id}`} className="font-semibold text-emerald-600 hover:text-emerald-700">
+                            View
+                          </Link>
+                        </td>
+                      </tr>
+                      ))
+                      )}
+                    </tbody>
               </table>
             </div>
           </section>

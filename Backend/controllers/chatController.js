@@ -288,3 +288,160 @@ exports.sendMessage = async (req, res) => {
     });
   }
 };
+exports.editMessage = async (req, res) => {
+  try {
+    const { messageId } = req.params;
+    const { message } = req.body;
+    const userId = req.user.id;
+
+    if (!message || !message.trim()) {
+      return res.status(400).json({
+        success: false,
+        message: "Message is required",
+      });
+    }
+
+    const messageCheck = await pool.query(
+      `
+      SELECT
+        m.id,
+        m.chat_id,
+        m.sender_id
+      FROM messages m
+      INNER JOIN chats c
+        ON m.chat_id = c.id
+      INNER JOIN swap_requests sr
+        ON c.swap_request_id = sr.id
+      WHERE m.id = $1
+        AND m.is_deleted = false
+        AND (
+          sr.sender_id = $2
+          OR sr.reciever_id = $2
+        )
+      `,
+      [messageId, userId]
+    );
+
+    if (messageCheck.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: "Message not found",
+      });
+    }
+
+    const existingMessage = messageCheck.rows[0];
+
+    if (Number(existingMessage.sender_id) !== Number(userId)) {
+      return res.status(403).json({
+        success: false,
+        message: "You can only edit your own messages",
+      });
+    }
+
+    const result = await pool.query(
+      `
+      UPDATE messages
+      SET
+        message = $1,
+        updated_at = CURRENT_TIMESTAMP
+      WHERE id = $2
+      RETURNING *
+      `,
+      [message.trim(), messageId]
+    );
+
+    const updatedMessage = result.rows[0];
+
+    const io = req.app.get("io");
+
+    if (io) {
+      io.to(`chat_${existingMessage.chat_id}`).emit(
+        "message_updated",
+        updatedMessage
+      );
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: "Message updated successfully",
+      data: updatedMessage,
+    });
+
+  } catch (error) {
+    console.error("EDIT MESSAGE ERROR:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+exports.deleteMessage = async (req, res) => {
+  try {
+    const { messageId } = req.params;
+    const userId = req.user.id;
+    const messageCheck = await pool.query(
+      `SELECT
+        m.id,
+        m.chat_id,
+        m.sender_id
+      FROM messages m
+      INNER JOIN chats c
+        ON m.chat_id = c.id
+      INNER JOIN swap_requests sr
+        ON c.swap_request_id = sr.id
+      WHERE m.id = $1
+        AND m.is_deleted = false
+        AND (
+          sr.sender_id = $2
+          OR sr.reciever_id = $2
+        )
+      `,
+      [messageId, userId]
+    );
+    if (messageCheck.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: "Message not found",
+      });
+    }
+    const existingMessage = messageCheck.rows[0];
+    if (existingMessage.sender_id !== userId) {
+      return res.status(403).json({
+        success: false,
+        message: "You can only delete your own messages",
+      });
+    }
+    const result = await pool.query(
+      `UPDATE messages
+      SET
+        is_deleted = true,
+        updated_at = CURRENT_TIMESTAMP
+      WHERE id = $1
+      RETURNING *
+      `,
+      [messageId]
+    );
+    const deletedMessage = result.rows[0];
+    // Real-time delete notification
+    const io = req.app.get("io");
+    io.to(`chat_${existingMessage.chat_id}`).emit(
+      "message_deleted",
+      {
+        id: deletedMessage.id,
+        chat_id: deletedMessage.chat_id,
+      }
+    );
+    res.status(200).json({
+      success: true,
+      message: "Message deleted successfully",
+      data: deletedMessage,
+    });
+  } catch (error) {
+    console.error("DELETE MESSAGE ERROR:", error);
+    res.status(500).json({
+      success: false,
+      message: "Server Error",
+    });
+  }
+};
