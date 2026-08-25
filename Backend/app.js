@@ -9,6 +9,7 @@ const clothingRoutes = require("./routes/clothingRoutes");
 const swapRoutes = require("./routes/swapRoutes");
 const chatRoutes = require("./routes/chatRoutes");
 const dashboardRoutes = require("./routes/dashboardRoutes");
+const nearbyRoutes = require("./routes/nearbyRoutes");
 const app = express();
 app.use(cors());
 app.use(helmet());
@@ -20,6 +21,7 @@ app.use("/api/users",userRoutes);
 app.use("/api/clothing",clothingRoutes);
 app.use("/api/swaps",swapRoutes);
 app.use("/api/chats",chatRoutes);
+app.use("/api/nearby",nearbyRoutes);
 app.get("/",(req,res)=>{
    res.status(200).json({
     success:true,

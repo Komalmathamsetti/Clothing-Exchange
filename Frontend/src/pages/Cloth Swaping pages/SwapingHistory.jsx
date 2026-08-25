@@ -237,7 +237,7 @@ export default function SwapHistory() {
   ];
   if (loading) {
   return (
-    <DashboardLayout>
+    <DashboardLayout user={user} showNavbar={true}>
       <main className="min-h-full bg-slate-50 px-4 py-6 sm:px-6 lg:px-8">
         <div className="flex min-h-[60vh] items-center justify-center">
           <div className="text-center">

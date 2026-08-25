@@ -291,6 +291,7 @@ export default function SwapRequests() {
   const handleViewDetails = (request)=>{
     setSelectedRequest(request);
   };
+  const user = JSON.parse(localStorage.getItem("user") || "null");
    if (loading) {
     return (
       <DashboardLayout>
@@ -309,7 +310,7 @@ export default function SwapRequests() {
     );
   }
   return (
-    <DashboardLayout>
+    <DashboardLayout user={user} showNavbar={true}>
       <main className="min-h-full bg-slate-50 px-4 py-6 sm:px-6 lg:px-8">
         <div className="mx-auto max-w-7xl">
           <div className="mb-8 flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
