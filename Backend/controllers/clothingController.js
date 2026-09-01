@@ -13,7 +13,9 @@ exports.createClothing = async(req,res)=>{
         gender,
         estimated_value,
         city,
-        state
+        state,
+        latitude,
+        longitude
       } = req.body;
       if(!category_id || !title || !size || !clothing_condition){
         return res.status(400).json({
@@ -35,9 +37,11 @@ exports.createClothing = async(req,res)=>{
            gender,
            estimated_value,
            city,
-           state
+           state,
+           latitude,
+           longitude
         ) VALUES 
-        ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)
+        ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)
         RETURNING *`,
         [
             ownerId,
@@ -51,7 +55,9 @@ exports.createClothing = async(req,res)=>{
             gender || null,
             estimated_value || null,
             city || null,
-            state || null
+            state || null,
+            latitude || null,
+            longitude || null
         ]
       );
       res.status(201).json({
@@ -174,7 +180,9 @@ exports.updateClothing = async (req, res) => {
             gender,
             estimated_value,
             city,
-            state
+            state,
+            latitude,
+            longitude
         } = req.body;
 
         const result = await pool.query(
@@ -191,9 +199,11 @@ exports.updateClothing = async (req, res) => {
                 estimated_value = $9,
                 city = $10,
                 state = $11,
+                latitude=$12,
+                longitude=$13,
                 updated_at = CURRENT_TIMESTAMP
-             WHERE id = $12
-             AND owner_id = $13
+             WHERE id = $14
+             AND owner_id = $15
              RETURNING *`,
             [
                 category_id,
@@ -207,6 +217,8 @@ exports.updateClothing = async (req, res) => {
                 estimated_value,
                 city,
                 state,
+                latitude || null,
+                longitude || null,
                 id,
                 ownerId
             ]

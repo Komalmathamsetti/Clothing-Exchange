@@ -204,14 +204,21 @@ function ListingCard({ item }) {
           </span>
         </p>
 
-        <p className="mt-2 flex items-center gap-1.5 text-sm text-slate-500">
-          <MapPin className="h-4 w-4 shrink-0 text-emerald-600" />
+        <div className="mt-2 space-y-1">
+          <p className="flex items-center gap-1.5 text-sm text-slate-500">
+            <MapPin className="h-4 w-4 shrink-0 text-emerald-600" />
 
-          <span className="truncate">
-            {item.city}, {item.state}
-          </span>
-        </p>
+            <span className="truncate">
+              {item.city}, {item.state}
+            </span>
+          </p>
 
+          {item.distance_km !== undefined && (
+            <p className="text-xs font-semibold text-emerald-600">
+              {Number(item.distance_km).toFixed(1)} km away
+            </p>
+          )}
+        </div>
         <div className="mt-4 flex items-center justify-between gap-3 border-t border-slate-100 pt-4">
           <div className="flex min-w-0 items-center gap-2">
             <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-xs font-semibold text-emerald-700">
@@ -304,6 +311,8 @@ export default function NearbySwaps() {
   const searchNearbyListings = async (
     searchCity = city,
     searchState = state,
+    latitude = null,
+    longitude = null,
   ) => {
     if (!searchCity.trim()) {
       setError("Please enter a city.");
@@ -317,6 +326,8 @@ export default function NearbySwaps() {
       const response = await getNearbyListings(
         searchCity.trim(),
         searchState.trim(),
+        latitude,
+        longitude,
       );
 
       setListings(response.data.listings || []);
@@ -375,15 +386,16 @@ export default function NearbySwaps() {
               "Could not determine your city from your location.",
             );
           }
-
-          console.log("DETECTED CITY:", detectedCity);
-          console.log("DETECTED STATE:", detectedState);
-
           setCity(detectedCity);
           setState(detectedState);
 
           // Search using the newly detected values
-          await searchNearbyListings(detectedCity, detectedState);
+          await searchNearbyListings(
+            detectedCity,
+            detectedState,
+            latitude,
+            longitude,
+          );
         } catch (error) {
           console.error("LOCATION DETECTION ERROR:", error);
 
@@ -462,8 +474,8 @@ export default function NearbySwaps() {
             setState={setState}
             onSearch={searchNearbyListings}
             loading={loading}
-           locating={locating}
-           onUseMyLocation={handleUseMyLocation}
+            locating={locating}
+            onUseMyLocation={handleUseMyLocation}
           />
         </div>
 

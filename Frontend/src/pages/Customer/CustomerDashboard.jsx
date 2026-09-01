@@ -112,7 +112,7 @@ export default function Dashboard() {
                   <h2 className="text-lg font-bold">Recent Activity</h2>
                   <p className="mt-1 text-sm text-slate-400">Your latest swap updates</p>
                 </div>
-                <a href="#" className="text-sm font-semibold text-emerald-600">View all</a>
+                <Link to="/history" className="text-sm font-semibold text-emerald-600">View all</Link>
               </div>
 
               {dashboard.recentActivity.length === 0 ? (
