@@ -10,7 +10,11 @@ API.interceptors.request.use((config)=>{
     return config;
 });
 export const createClothing = (clothingData)=>{
-    return API.post("/",clothingData);
+    return API.post("/",clothingData,{
+        headers:{
+            "Content-Type":"multipart/form-data"
+        }
+    });
 };
 export const getAllClothings = ()=>{
     return API.get("/");

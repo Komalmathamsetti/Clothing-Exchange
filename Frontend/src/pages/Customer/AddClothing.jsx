@@ -6,6 +6,8 @@ import DashboardLayout from "../../components/DashbaordLayout";
 export default function AddClothing() {
   const navigate = useNavigate();
   const [categories, setCategories] = useState([]);
+  const [images, setImages] = useState([]);
+  const [imagePreviews, setImagePreviews] = useState([]);
   const [user] = useState(() => {
     const storedUser = localStorage.getItem("user");
     return storedUser ? JSON.parse(storedUser) : null;
@@ -122,14 +124,32 @@ export default function AddClothing() {
         }
       },
       {
-        enableHighAccuracy: true,
-        timeout: 10000,
+        enableHighAccuracy: false,
+        timeout: 30000,
         maximumAge: 300000,
       },
     );
   };
+  const handleImageChange = (e) => {
+    const files = Array.from(e.target.files);
+    if (files.length > 5) {
+      toast.error("You can upload a maximum of 5 images.");
+      return;
+    }
+    const validFiles = files.filter((file) =>
+      ["image/jpeg", "image/png", "image/webp"].includes(file.type),
+    );
+    if (validFiles.length !== files.length) {
+      toast.error("Only JPG,PNG and WEBP images are allowed.");
+      return;
+    }
+    setImages(validFiles);
+    const previews = validFiles.map((file) => URL.createObjectURL(file));
+    setImagePreviews(previews);
+  };
   const handleSubmit = async (e) => {
     e.preventDefault();
+
     if (
       !formData.category_id ||
       !formData.title.trim() ||
@@ -139,31 +159,51 @@ export default function AddClothing() {
       toast.error("Please provide category, title, size and condition");
       return;
     }
+
     try {
       setLoading(true);
-      const data = {
-        category_id: Number(formData.category_id),
-        title: formData.title,
-        description: formData.description || null,
-        brand: formData.brand || null,
-        size: formData.size,
-        clothing_condition: formData.clothing_condition,
-        color: formData.color || null,
-        gender: formData.gender || null,
-        estimated_value: formData.estimated_value
-          ? Number(formData.estimated_value)
-          : null,
-        city: formData.city || null,
-        state: formData.state || null,
-        latitude: formData.latitude ? Number(formData.latitude) : null,
 
-        longitude: formData.longitude ? Number(formData.longitude) : null,
-      };
+      const data = new FormData();
+
+      data.append("category_id", Number(formData.category_id));
+
+      data.append("title", formData.title.trim());
+
+      data.append("description", formData.description || "");
+
+      data.append("brand", formData.brand || "");
+
+      data.append("size", formData.size);
+
+      data.append("clothing_condition", formData.clothing_condition);
+
+      data.append("color", formData.color || "");
+
+      data.append("gender", formData.gender || "");
+
+      data.append("estimated_value", formData.estimated_value || "");
+
+      data.append("city", formData.city || "");
+
+      data.append("state", formData.state || "");
+
+      data.append("latitude", formData.latitude ?? "");
+
+      data.append("longitude", formData.longitude ?? "");
+
+      // Add clothing images
+      images.forEach((image) => {
+        data.append("images", image);
+      });
+
       const response = await createClothing(data);
+
       toast.success(response.data.message);
+
       navigate("/my-listings");
     } catch (error) {
-      console.log(error);
+      console.error("CREATE CLOTHING ERROR:", error);
+
       toast.error(error.response?.data?.message || "Failed to create clothing");
     } finally {
       setLoading(false);
@@ -439,39 +479,66 @@ export default function AddClothing() {
 
             {/* Image Upload UI */}
             <section>
-              <div className="mb-6">
-                <h2 className="text-lg font-bold text-slate-900">
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
                   Clothing Photos
-                </h2>
-                <p className="mt-1 text-sm text-slate-500">
-                  Add clear photos so members can see your item.
-                </p>
-              </div>
+                </label>
 
-              <div className="group cursor-pointer rounded-2xl border-2 border-dashed border-emerald-200 bg-emerald-50/40 px-6 py-12 text-center transition hover:border-emerald-400 hover:bg-emerald-50">
-                <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-white text-emerald-600 shadow-sm transition group-hover:scale-105">
-                  <svg
-                    className="h-8 w-8"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth="1.8"
-                      d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-8h.01M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
-                    />
-                  </svg>
+                <div className="border-2 border-dashed border-gray-300 rounded-xl p-6 text-center hover:border-blue-400 transition">
+                  <input
+                    type="file"
+                    id="clothing-images"
+                    multiple
+                    accept="image/jpeg,image/png,image/webp"
+                    onChange={handleImageChange}
+                    className="hidden"
+                  />
+
+                  <label htmlFor="clothing-images" className="cursor-pointer">
+                    <div className="text-4xl mb-3">📸</div>
+
+                    <p className="text-gray-700 font-medium">
+                      Click to upload clothing photos
+                    </p>
+
+                    <p className="text-sm text-gray-500 mt-1">
+                      JPG, PNG or WEBP • Maximum 5 images
+                    </p>
+                  </label>
                 </div>
 
-                <h3 className="font-semibold text-slate-800">
-                  Upload clothing photos
-                </h3>
-                <p className="mt-2 text-sm text-slate-500">PNG, JPG or WEBP</p>
-                <p className="mt-1 text-xs text-slate-400">
-                  Add up to 5 photos
-                </p>
+                {imagePreviews.length > 0 && (
+                  <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mt-4">
+                    {imagePreviews.map((preview, index) => (
+                      <div key={index} className="relative">
+                        <img
+                          src={preview}
+                          alt={`Preview ${index + 1}`}
+                          className="w-full h-32 object-cover rounded-lg border"
+                        />
+
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const updatedImages = images.filter(
+                              (_, i) => i !== index,
+                            );
+
+                            const updatedPreviews = imagePreviews.filter(
+                              (_, i) => i !== index,
+                            );
+
+                            setImages(updatedImages);
+                            setImagePreviews(updatedPreviews);
+                          }}
+                          className="absolute top-1 right-1 bg-red-500 text-white rounded-full w-7 h-7"
+                        >
+                          ×
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             </section>
 
