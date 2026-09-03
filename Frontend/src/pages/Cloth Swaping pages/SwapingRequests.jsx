@@ -1,6 +1,11 @@
-import {useState,useEffect} from "react";
+import { useState, useEffect, useRef } from "react";
 import toast from "react-hot-toast";
-import { getRecievedRequests,getSentRequests,acceptSwapRequest,rejectSwapRequest } from "../../services/swapServices";
+import {
+  getRecievedRequests,
+  getSentRequests,
+  acceptSwapRequest,
+  rejectSwapRequest,
+} from "../../services/swapServices";
 import {
   ArrowLeftRight,
   Check,
@@ -14,6 +19,7 @@ import {
   X,
 } from "lucide-react";
 import DashboardLayout from "../../components/DashbaordLayout";
+import { io } from "socket.io-client";
 const statusStyles = {
   PENDING: "bg-amber-50 text-amber-700 ring-amber-600/20",
   ACCEPTED: "bg-emerald-50 text-emerald-700 ring-emerald-600/20",
@@ -96,7 +102,7 @@ function RequestCard({
   const personName = isrecieved
     ? request.sender_name || request.sender?.name || "ClothSwap member"
     : request.reciever_name || request.reciever?.name || "ClothSwap member";
- 
+
   const personAvatar = isrecieved
     ? request.sender_avatar || request.sender?.avatar
     : request.reciever_avatar || request.reciever?.avatar;
@@ -143,7 +149,12 @@ function RequestCard({
       <div className="space-y-4 p-5 sm:p-6">
         <div className="grid gap-3 md:grid-cols-[1fr_auto_1fr] md:items-center">
           <ClothingDetails
-            item={{title: request.sender_item_title,brand: request.sender_item_brand,size: request.sender_item_size,condition: request.sender_item_condition,}}
+            item={{
+              title: request.sender_item_title,
+              brand: request.sender_item_brand,
+              size: request.sender_item_size,
+              condition: request.sender_item_condition,
+            }}
             label={isrecieved ? "They offer" : "You offer"}
           />
 
@@ -152,7 +163,12 @@ function RequestCard({
           </div>
 
           <ClothingDetails
-            item= {{title: request.reciever_item_title,brand: request.reciever_item_brand,size: request.reciever_item_size,condition: request.reciever_item_condition,}}
+            item={{
+              title: request.reciever_item_title,
+              brand: request.reciever_item_brand,
+              size: request.reciever_item_size,
+              condition: request.reciever_item_condition,
+            }}
             label={isrecieved ? "They request" : "You request"}
           />
         </div>
@@ -186,15 +202,21 @@ function RequestCard({
 
           {isrecieved && status === "PENDING" ? (
             <div className="flex gap-2">
-              <button type="button" onClick={() => onReject(request)}
-              disabled={actionLoading === request.id}
-              className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl border border-rose-200 px-4 py-2.5 text-sm font-bold text-rose-600 transition hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-50 sm:flex-none">
-              <X size={16} />
-              Reject 
+              <button
+                type="button"
+                onClick={() => onReject(request)}
+                disabled={actionLoading === request.id}
+                className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl border border-rose-200 px-4 py-2.5 text-sm font-bold text-rose-600 transition hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-50 sm:flex-none"
+              >
+                <X size={16} />
+                Reject
               </button>
-              <button type="button" onClick={() => onAccept(request)}
-              disabled={actionLoading === request.id}
-              className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-50 sm:flex-none">
+              <button
+                type="button"
+                onClick={() => onAccept(request)}
+                disabled={actionLoading === request.id}
+                className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-50 sm:flex-none"
+              >
                 <Check size={16} />
                 Accept
               </button>
@@ -208,43 +230,116 @@ function RequestCard({
 
 export default function SwapRequests() {
   const [recievedRequests, setrecievedRequests] = useState([]);
-  const [sentRequests,setSentRequests] = useState([]);
-  const [activeTab,setActiveTab] = useState("recieved");
-  const [loading,setLoading] = useState(true);
+  const [sentRequests, setSentRequests] = useState([]);
+  const [activeTab, setActiveTab] = useState("recieved");
+  const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(null);
-  const [selectedRequest,setSelectedRequest] = useState(null);
+  const [selectedRequest, setSelectedRequest] = useState(null);
+  const socketRef = useRef(null);
   const requests =
     activeTab === "sent" ? sentRequests || [] : recievedRequests || [];
   const isrecieved = activeTab !== "sent";
-  useEffect(()=>{
-    const loadRequest = async()=>{
-        try{
-            setLoading(true);
-            const [recievedResponse,sentResponse]=await Promise.all([
-                getRecievedRequests(),
-                getSentRequests(),
-            ]);
-            setrecievedRequests(recievedResponse.data.requests || []);
-            setSentRequests(sentResponse.data.requests || []);
-        }catch(error){
-            console.log(error);
-            toast.error(error.response?.data?.message || "Failed to load swap requests");
-        }finally{
-            setLoading(false);
-        }
+  useEffect(() => {
+    const loadRequest = async () => {
+      try {
+        setLoading(true);
+        const [recievedResponse, sentResponse] = await Promise.all([
+          getRecievedRequests(),
+          getSentRequests(),
+        ]);
+        setrecievedRequests(recievedResponse.data.requests || []);
+        setSentRequests(sentResponse.data.requests || []);
+      } catch (error) {
+        console.log(error);
+        toast.error(
+          error.response?.data?.message || "Failed to load swap requests",
+        );
+      } finally {
+        setLoading(false);
+      }
     };
     loadRequest();
-  },[]);
+  }, []);
+  useEffect(() => {
+    const storedUser = localStorage.getItem("user");
+
+    if (!storedUser) {
+      console.log("No logged-in user found");
+      return;
+    }
+
+    const user = JSON.parse(storedUser);
+
+    if (!user?.id) {
+      console.log("User ID not found");
+      return;
+    }
+
+    socketRef.current = io("http://localhost:5000");
+
+    socketRef.current.on("connect", () => {
+      console.log("Swap socket connected:", socketRef.current.id);
+
+      socketRef.current.emit("join_user", user.id);
+    });
+
+    return () => {
+      if (socketRef.current) {
+        socketRef.current.disconnect();
+        socketRef.current = null;
+      }
+    };
+  }, []);
+  useEffect(() => {
+    if (!socketRef.current) {
+      return;
+    }
+
+    const handleSwapStatusUpdate = (data) => {
+      console.log("REAL-TIME SWAP STATUS:", data);
+
+      const { request_id, status } = data;
+
+      if (!request_id || !status) {
+        return;
+      }
+
+      // Update received requests
+      setrecievedRequests((prev) =>
+        prev.map((item) =>
+          Number(item.id) === Number(request_id)
+            ? {
+                ...item,
+                status: status,
+              }
+            : item,
+        ),
+      );
+
+      // Update sent requests
+      setSentRequests((prev) =>
+        prev.map((item) =>
+          Number(item.id) === Number(request_id)
+            ? {
+                ...item,
+                status: status,
+              }
+            : item,
+        ),
+      );
+    };
+
+    socketRef.current.on("swap_status_updated", handleSwapStatusUpdate);
+
+    return () => {
+      socketRef.current?.off("swap_status_updated", handleSwapStatusUpdate);
+    };
+  }, []);
   const handleAccept = async (request) => {
     try {
       setActionLoading(request.id);
-      const response = await acceptSwapRequest(
-        request.id
-      );
-      toast.success(
-        response.data.message ||
-          "Swap request accepted"
-      );
+      const response = await acceptSwapRequest(request.id);
+      toast.success(response.data.message || "Swap request accepted");
       // Update current request
       setrecievedRequests((prev) =>
         prev.map((item) =>
@@ -253,46 +348,44 @@ export default function SwapRequests() {
                 ...item,
                 status: "ACCEPTED",
               }
-            : item
-        )
+            : item,
+        ),
       );
     } catch (error) {
       console.log("ACCEPT REQUEST ERROR:", error);
 
-      toast.error(
-        error.response?.data?.message ||
-          "Failed to accept request"
-      );
+      toast.error(error.response?.data?.message || "Failed to accept request");
     } finally {
       setActionLoading(null);
     }
   };
-  const handleReject = async(request)=>{
-    try{
-        setActionLoading(request.id);
-        const response = await rejectSwapRequest(request.id);
-        toast.success(response.data.message || "Swap request rejected");
-        setrecievedRequests((prev)=>
-         prev.map((item)=>
-          item.id === request.id 
+  const handleReject = async (request) => {
+    try {
+      setActionLoading(request.id);
+      const response = await rejectSwapRequest(request.id);
+      toast.success(response.data.message || "Swap request rejected");
+      setrecievedRequests((prev) =>
+        prev.map((item) =>
+          item.id === request.id
             ? {
                 ...item,
-                status:"REJECTED",
-            } : item
-         )
-        );
-    }catch(error){
-        console.log("REJECT REQUEST ERROR:", error);
-        toast.error(error.response?.data?.message ||  "Failed to reject request");
-    }finally{
-        setActionLoading(null);
+                status: "REJECTED",
+              }
+            : item,
+        ),
+      );
+    } catch (error) {
+      console.log("REJECT REQUEST ERROR:", error);
+      toast.error(error.response?.data?.message || "Failed to reject request");
+    } finally {
+      setActionLoading(null);
     }
   };
-  const handleViewDetails = (request)=>{
+  const handleViewDetails = (request) => {
     setSelectedRequest(request);
   };
   const user = JSON.parse(localStorage.getItem("user") || "null");
-   if (loading) {
+  if (loading) {
     return (
       <DashboardLayout>
         <main className="min-h-screen bg-slate-50 px-4 py-6 sm:px-6 lg:px-8">
@@ -411,220 +504,238 @@ export default function SwapRequests() {
         </div>
       </main>
       {selectedRequest && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4 py-6">
-            <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-3xl bg-white shadow-2xl">
-              {/* Header */}
-              <div className="flex items-start justify-between border-b border-slate-100 p-6">
-                <div>
-                  <p className="text-xs font-bold uppercase tracking-wider text-emerald-600">
-                    Swap Request
-                  </p>
-                  <h2 className="mt-1 text-2xl font-black text-slate-900">
-                    Request Details
-                  </h2>
-                  <p className="mt-1 text-sm text-slate-500">
-                    Request #{selectedRequest.id}
-                  </p>
-                </div>
-                <button type="button" onClick={() => setSelectedRequest(null)} className="rounded-full p-2 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700">
-                  <X size={20} />
-                </button>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4 py-6">
+          <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-3xl bg-white shadow-2xl">
+            {/* Header */}
+            <div className="flex items-start justify-between border-b border-slate-100 p-6">
+              <div>
+                <p className="text-xs font-bold uppercase tracking-wider text-emerald-600">
+                  Swap Request
+                </p>
+                <h2 className="mt-1 text-2xl font-black text-slate-900">
+                  Request Details
+                </h2>
+                <p className="mt-1 text-sm text-slate-500">
+                  Request #{selectedRequest.id}
+                </p>
               </div>
-              <div className="space-y-6 p-6">
-                {/* Status */}
-                <div className="flex items-center justify-between rounded-2xl bg-slate-50 p-4">
-                  <div>
-                    <p className="text-xs font-semibold text-slate-400">
-                      Status
-                    </p>
-                    <p className="mt-1 font-bold text-slate-900">
-                      {formatStatus(selectedRequest.status)}
-                    </p>
-                  </div>
-                  <span className={`rounded-full px-4 py-2 text-xs font-bold ${
-                    statusStyles[String(selectedRequest.status || "PENDING").toUpperCase()] || "bg-slate-100 text-slate-600"
-                  }`}>
-                    {formatStatus(selectedRequest.status)}
-                  </span>
-                </div>
-                {/* Person */}
-                <div className="rounded-2xl border border-slate-200 p-5">
-                  <p className="mb-3 text-xs font-bold uppercase tracking-wider text-slate-400">
-                    {isrecieved ? "Request From" : "Request To"}
-                  </p>
-                  <div className="flex items-center gap-3">
-                    <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-100 font-bold text-emerald-700">
-                      {(
-                        isrecieved? selectedRequest.sender_name: selectedRequest.reciever_name)?.charAt(0)?.toUpperCase() || "C"}
-                    </div>
-                    <div>
-                      <p className="font-bold text-slate-900">
-                        {isrecieved? selectedRequest.sender_name || "ClothSwap member": selectedRequest.reciever_name || "ClothSwap member"}
-                      </p>
-                      <p className="text-sm text-slate-500">
-                        ClothSwap member
-                      </p>
-                    </div>
-                  </div>
-                </div>
-                {/* Swap Items */}
+              <button
+                type="button"
+                onClick={() => setSelectedRequest(null)}
+                className="rounded-full p-2 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"
+              >
+                <X size={20} />
+              </button>
+            </div>
+            <div className="space-y-6 p-6">
+              {/* Status */}
+              <div className="flex items-center justify-between rounded-2xl bg-slate-50 p-4">
                 <div>
+                  <p className="text-xs font-semibold text-slate-400">Status</p>
+                  <p className="mt-1 font-bold text-slate-900">
+                    {formatStatus(selectedRequest.status)}
+                  </p>
+                </div>
+                <span
+                  className={`rounded-full px-4 py-2 text-xs font-bold ${
+                    statusStyles[
+                      String(selectedRequest.status || "PENDING").toUpperCase()
+                    ] || "bg-slate-100 text-slate-600"
+                  }`}
+                >
+                  {formatStatus(selectedRequest.status)}
+                </span>
+              </div>
+              {/* Person */}
+              <div className="rounded-2xl border border-slate-200 p-5">
                 <p className="mb-3 text-xs font-bold uppercase tracking-wider text-slate-400">
-                Clothing Exchange
+                  {isrecieved ? "Request From" : "Request To"}
+                </p>
+                <div className="flex items-center gap-3">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-100 font-bold text-emerald-700">
+                    {(isrecieved
+                      ? selectedRequest.sender_name
+                      : selectedRequest.reciever_name
+                    )
+                      ?.charAt(0)
+                      ?.toUpperCase() || "C"}
+                  </div>
+                  <div>
+                    <p className="font-bold text-slate-900">
+                      {isrecieved
+                        ? selectedRequest.sender_name || "ClothSwap member"
+                        : selectedRequest.reciever_name || "ClothSwap member"}
+                    </p>
+                    <p className="text-sm text-slate-500">ClothSwap member</p>
+                  </div>
+                </div>
+              </div>
+              {/* Swap Items */}
+              <div>
+                <p className="mb-3 text-xs font-bold uppercase tracking-wider text-slate-400">
+                  Clothing Exchange
                 </p>
                 <div className="grid gap-4 md:grid-cols-[1fr_auto_1fr] md:items-center">
-                {/* Sender item */}
-                <div className="rounded-2xl border border-slate-200 p-5">
-                <p className="mb-3 text-xs font-bold text-emerald-600">
-                {isrecieved ? "THEY OFFER" : "YOU OFFER"}
-                </p>
-                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600">
-                <Shirt size={22} />
+                  {/* Sender item */}
+                  <div className="rounded-2xl border border-slate-200 p-5">
+                    <p className="mb-3 text-xs font-bold text-emerald-600">
+                      {isrecieved ? "THEY OFFER" : "YOU OFFER"}
+                    </p>
+                    <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600">
+                      <Shirt size={22} />
+                    </div>
+
+                    <h3 className="mt-4 font-bold text-slate-900">
+                      {selectedRequest.sender_item_title || "Clothing item"}
+                    </h3>
+
+                    <div className="mt-3 space-y-1 text-sm text-slate-500">
+                      <p>
+                        Brand:{" "}
+                        <span className="font-medium text-slate-700">
+                          {selectedRequest.sender_item_brand || "Not specified"}
+                        </span>
+                      </p>
+
+                      <p>
+                        Size:{" "}
+                        <span className="font-medium text-slate-700">
+                          {selectedRequest.sender_item_size || "Not specified"}
+                        </span>
+                      </p>
+
+                      <p>
+                        Condition:{" "}
+                        <span className="font-medium text-slate-700">
+                          {selectedRequest.sender_item_condition ||
+                            "Not specified"}
+                        </span>
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Swap icon */}
+                  <div className="mx-auto flex h-11 w-11 items-center justify-center rounded-full bg-emerald-100 text-emerald-600">
+                    <ArrowLeftRight size={20} />
+                  </div>
+
+                  {/* Receiver item */}
+                  <div className="rounded-2xl border border-slate-200 p-5">
+                    <p className="mb-3 text-xs font-bold text-emerald-600">
+                      {isrecieved ? "THEY REQUEST" : "YOU REQUEST"}
+                    </p>
+
+                    <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600">
+                      <Shirt size={22} />
+                    </div>
+
+                    <h3 className="mt-4 font-bold text-slate-900">
+                      {selectedRequest.reciever_item_title || "Clothing item"}
+                    </h3>
+
+                    <div className="mt-3 space-y-1 text-sm text-slate-500">
+                      <p>
+                        Brand:{" "}
+                        <span className="font-medium text-slate-700">
+                          {selectedRequest.reciever_item_brand ||
+                            "Not specified"}
+                        </span>
+                      </p>
+
+                      <p>
+                        Size:{" "}
+                        <span className="font-medium text-slate-700">
+                          {selectedRequest.reciever_item_size ||
+                            "Not specified"}
+                        </span>
+                      </p>
+
+                      <p>
+                        Condition:{" "}
+                        <span className="font-medium text-slate-700">
+                          {selectedRequest.reciever_item_condition ||
+                            "Not specified"}
+                        </span>
+                      </p>
+                    </div>
+                  </div>
                 </div>
-
-              <h3 className="mt-4 font-bold text-slate-900">
-                {selectedRequest.sender_item_title || "Clothing item"}
-              </h3>
-
-              <div className="mt-3 space-y-1 text-sm text-slate-500">
-                <p>
-                  Brand:{" "}
-                  <span className="font-medium text-slate-700">
-                    {selectedRequest.sender_item_brand || "Not specified"}
-                  </span>
-                </p>
-
-                <p>
-                  Size:{" "}
-                  <span className="font-medium text-slate-700">
-                    {selectedRequest.sender_item_size || "Not specified"}
-                  </span>
-                </p>
-
-                <p>
-                  Condition:{" "}
-                  <span className="font-medium text-slate-700">
-                    {selectedRequest.sender_item_condition || "Not specified"}
-                  </span>
-                </p>
-              </div>
-            </div>
-
-            {/* Swap icon */}
-            <div className="mx-auto flex h-11 w-11 items-center justify-center rounded-full bg-emerald-100 text-emerald-600">
-              <ArrowLeftRight size={20} />
-            </div>
-
-            {/* Receiver item */}
-            <div className="rounded-2xl border border-slate-200 p-5">
-              <p className="mb-3 text-xs font-bold text-emerald-600">
-                {isrecieved ? "THEY REQUEST" : "YOU REQUEST"}
-              </p>
-
-              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600">
-                <Shirt size={22} />
               </div>
 
-              <h3 className="mt-4 font-bold text-slate-900">
-                {selectedRequest.reciever_item_title || "Clothing item"}
-              </h3>
+              {/* Message */}
+              {selectedRequest.message && (
+                <div className="rounded-2xl bg-slate-50 p-5">
+                  <div className="flex gap-3">
+                    <MessageSquare
+                      className="mt-0.5 text-emerald-600"
+                      size={19}
+                    />
 
-              <div className="mt-3 space-y-1 text-sm text-slate-500">
-                <p>
-                  Brand:{" "}
-                  <span className="font-medium text-slate-700">
-                    {selectedRequest.reciever_item_brand || "Not specified"}
-                  </span>
-                </p>
+                    <div>
+                      <p className="text-xs font-bold uppercase tracking-wider text-slate-400">
+                        Message
+                      </p>
 
-                <p>
-                  Size:{" "}
-                  <span className="font-medium text-slate-700">
-                    {selectedRequest.reciever_item_size || "Not specified"}
-                  </span>
-                </p>
+                      <p className="mt-2 text-sm leading-6 text-slate-600">
+                        {selectedRequest.message}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
 
-                <p>
-                  Condition:{" "}
-                  <span className="font-medium text-slate-700">
-                    {selectedRequest.reciever_item_condition || "Not specified"}
-                  </span>
-                </p>
-              </div>
+              {/* Date */}
+              {selectedRequest.created_at && (
+                <div className="text-sm text-slate-500">
+                  <span className="font-semibold text-slate-700">
+                    Requested:
+                  </span>{" "}
+                  {new Date(selectedRequest.created_at).toLocaleString()}
+                </div>
+              )}
+
+              {/* Actions for received pending request */}
+              {isrecieved &&
+                String(selectedRequest.status).toUpperCase() === "PENDING" && (
+                  <div className="flex gap-3 border-t border-slate-100 pt-5">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSelectedRequest(null);
+                        handleReject(selectedRequest);
+                      }}
+                      disabled={actionLoading === selectedRequest.id}
+                      className="flex-1 rounded-xl border border-rose-200 px-4 py-3 font-bold text-rose-600 transition hover:bg-rose-50 disabled:opacity-50"
+                    >
+                      Reject
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSelectedRequest(null);
+                        handleAccept(selectedRequest);
+                      }}
+                      disabled={actionLoading === selectedRequest.id}
+                      className="flex-1 rounded-xl bg-emerald-600 px-4 py-3 font-bold text-white transition hover:bg-emerald-700 disabled:opacity-50"
+                    >
+                      Accept Swap
+                    </button>
+                  </div>
+                )}
+
+              {/* Close */}
+              <button
+                type="button"
+                onClick={() => setSelectedRequest(null)}
+                className="w-full rounded-xl border border-slate-200 px-4 py-3 font-semibold text-slate-600 transition hover:bg-slate-50 cursor-pointer"
+              >
+                Close
+              </button>
             </div>
           </div>
         </div>
-
-        {/* Message */}
-        {selectedRequest.message && (
-          <div className="rounded-2xl bg-slate-50 p-5">
-            <div className="flex gap-3">
-              <MessageSquare className="mt-0.5 text-emerald-600" size={19} />
-
-              <div>
-                <p className="text-xs font-bold uppercase tracking-wider text-slate-400">
-                  Message
-                </p>
-
-                <p className="mt-2 text-sm leading-6 text-slate-600">
-                  {selectedRequest.message}
-                </p>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Date */}
-        {selectedRequest.created_at && (
-          <div className="text-sm text-slate-500">
-            <span className="font-semibold text-slate-700">
-              Requested:
-            </span>{" "}
-            {new Date(selectedRequest.created_at).toLocaleString()}
-          </div>
-        )}
-
-        {/* Actions for received pending request */}
-        {isrecieved &&
-          String(selectedRequest.status).toUpperCase() === "PENDING" && (
-            <div className="flex gap-3 border-t border-slate-100 pt-5">
-              <button
-                type="button"
-                onClick={() => {
-                  setSelectedRequest(null);
-                  handleReject(selectedRequest);
-                }}
-                disabled={actionLoading === selectedRequest.id}
-                className="flex-1 rounded-xl border border-rose-200 px-4 py-3 font-bold text-rose-600 transition hover:bg-rose-50 disabled:opacity-50"
-              >
-                Reject
-              </button>
-
-              <button
-                type="button"
-                onClick={() => {
-                  setSelectedRequest(null);
-                  handleAccept(selectedRequest);
-                }}
-                disabled={actionLoading === selectedRequest.id}
-                className="flex-1 rounded-xl bg-emerald-600 px-4 py-3 font-bold text-white transition hover:bg-emerald-700 disabled:opacity-50"
-              >
-                Accept Swap
-              </button>
-            </div>
-          )}
-
-        {/* Close */}
-        <button
-          type="button"
-          onClick={() => setSelectedRequest(null)}
-          className="w-full rounded-xl border border-slate-200 px-4 py-3 font-semibold text-slate-600 transition hover:bg-slate-50 cursor-pointer"
-        >
-          Close
-        </button>
-      </div>
-    </div>
-  </div>)}
+      )}
     </DashboardLayout>
   );
 }

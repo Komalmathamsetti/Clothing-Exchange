@@ -38,7 +38,7 @@ export default function ClothingDetails() {
         JSON.stringify(response.data, null, 2),
       );
 
-      setMyClothes(response.data.listings || []);
+      setMyClothes(response.data.clothing || []);
       setShowSwapModal(true);
     } catch (error) {
       console.log("MY LISTINGS ERROR:", error);
@@ -325,11 +325,16 @@ export default function ClothingDetails() {
                 className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 outline-none focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10"
               >
                 <option value="">Select a clothing item</option>
-                {myClothes.map((item) => (
-                  <option key={item.id} value={item.id}>
-                    {item.title} — {item.size} — {item.clothing_condition}
-                  </option>
-                ))}
+
+                {myClothes
+                  .filter(
+                    (item) => String(item.status).toUpperCase() === "AVAILABLE",
+                  )
+                  .map((item) => (
+                    <option key={item.id} value={item.id}>
+                      {item.title} — {item.size} — {item.clothing_condition}
+                    </option>
+                  ))}
               </select>
             </div>
             {/* Message */}

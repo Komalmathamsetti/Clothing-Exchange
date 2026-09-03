@@ -1,104 +1,116 @@
 const pool = require("../config/db");
-exports.createSwapRequest = async(req,res)=>{
-    try{
-      const senderId = req.user.id;
-      const {
-        reciever_id,
-        sender_item_id,
-        reciever_item_id,
-        message
-      } = req.body;
-      if(!reciever_id || !sender_item_id || !reciever_item_id){
-        return res.status(400).json({
-            success:false,
-            message:"reciever_id, sender_item_id and reciever_item_id are required"
-        });
-      }
-      if(Number(senderId) === Number(reciever_id)){
-        return res.status(400).json({
-            success:false,
-            message:"You cannot send a swap request to yourself"
-        });
-      }
-      const senderItemResult = await pool.query(
-        `SELECT id,owner_id,status 
-        FROM clothing_items 
-        WHERE id = $1`,[sender_item_id]
-      );
-      if(senderItemResult.rows.length === 0){
-        return res.status(403).json({
-          success:false,
-          message:"Your offered clothing item cannot be found"
-        });
-      }
-      const senderItem = senderItemResult.rows[0];
-      if(Number(senderItem.owner_id) !== Number(senderId)){
-        return res.status(403).json({
-          success:false,
-          message:"You can only offer clothing items that belong to you"
-        });
-      }
-      if (senderItem.status?.toUpperCase() !== "AVAILABLE") {
+exports.createSwapRequest = async (req, res) => {
+  const client = await pool.connect();
+
+  try {
+    const senderId = req.user.id;
+
+    const { reciever_id, sender_item_id, reciever_item_id, message } = req.body;
+    if (!reciever_id || !sender_item_id || !reciever_item_id) {
       return res.status(400).json({
         success: false,
         message:
-          "Your offered clothing item is not available",
+          "reciever_id, sender_item_id and reciever_item_id are required",
       });
     }
-    const recieverItemResult = await pool.query(
-      `SELECT id,owner_id,status
-      FROM clothing_items 
-      WHERE id = $1`,[reciever_item_id]
+    if (Number(senderId) === Number(reciever_id)) {
+      return res.status(400).json({
+        success: false,
+        message: "You cannot send a swap request to yourself",
+      });
+    }
+    const senderItemResult = await client.query(
+      `
+      SELECT
+        id,
+        owner_id,
+        status
+      FROM clothing_items
+      WHERE id = $1
+      `,
+      [sender_item_id],
     );
-    if(recieverItemResult.rows.length === 0){
-      return res.status(403).json({
-        success:false,
-        message:"Requested clothing item was not found"
+
+    if (senderItemResult.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: "Your offered clothing item cannot be found",
       });
     }
+
+    const senderItem = senderItemResult.rows[0];
+    if (Number(senderItem.owner_id) !== Number(senderId)) {
+      return res.status(403).json({
+        success: false,
+        message: "You can only offer clothing items that belong to you",
+      });
+    }
+    if (senderItem.status?.toUpperCase() !== "AVAILABLE") {
+      return res.status(400).json({
+        success: false,
+        message: "Your offered clothing item is not available",
+      });
+    }
+    const recieverItemResult = await client.query(
+      `
+        SELECT
+          id,
+          owner_id,
+          status
+        FROM clothing_items
+        WHERE id = $1
+        `,
+      [reciever_item_id],
+    );
+
+    if (recieverItemResult.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: "Requested clothing item was not found",
+      });
+    }
+
     const recieverItem = recieverItemResult.rows[0];
-    if(Number(recieverItem.owner_id) !== Number(reciever_id)){
+    if (Number(recieverItem.owner_id) !== Number(reciever_id)) {
       return res.status(403).json({
-        success:false,
-        message:"The reciever does not own this clothing item"
+        success: false,
+        message: "The receiver does not own this clothing item",
       });
     }
-    if (recieverItem.status?.toUpperCase() !=="AVAILABLE") {
+    if (recieverItem.status?.toUpperCase() !== "AVAILABLE") {
       return res.status(400).json({
         success: false,
-        message:
-          "The requested clothing item is no longer available",
+        message: "The requested clothing item is no longer available",
       });
     }
-     if (Number(sender_item_id) === Number(reciever_item_id)) {
+    if (Number(sender_item_id) === Number(reciever_item_id)) {
       return res.status(400).json({
         success: false,
-        message:
-          "You cannot offer the same clothing item",
+        message: "You cannot offer the same clothing item",
       });
     }
-    const duplicateResult = await pool.query(
-      `SELECT id
-      FROM swap_requests
-      WHERE sender_id = $1
-        AND reciever_id = $2
-        AND sender_item_id = $3
-        AND reciever_item_id = $4
-        AND status = 'PENDING'`,[ senderId,reciever_id,sender_item_id,reciever_item_id,]
+
+    const duplicateResult = await client.query(
+      `
+        SELECT id
+        FROM swap_requests
+        WHERE sender_id = $1
+          AND reciever_id = $2
+          AND sender_item_id = $3
+          AND reciever_item_id = $4
+          AND status = 'PENDING'
+        `,
+      [senderId, reciever_id, sender_item_id, reciever_item_id],
     );
+
     if (duplicateResult.rows.length > 0) {
       return res.status(409).json({
         success: false,
-        message:
-          "You already have a pending request for this swap",
+        message: "You already have a pending request for this swap",
       });
     }
-
-    // =================================================
-    // Create request
-    // =================================================
-
-    const result = await pool.query(
+    await client.query("BEGIN");
+    const result = await client.query(
       `
       INSERT INTO swap_requests
       (
@@ -110,7 +122,14 @@ exports.createSwapRequest = async(req,res)=>{
         status
       )
       VALUES
-      ($1, $2, $3, $4, $5, 'PENDING')
+      (
+        $1,
+        $2,
+        $3,
+        $4,
+        $5,
+        'PENDING'
+      )
       RETURNING *
       `,
       [
@@ -118,33 +137,39 @@ exports.createSwapRequest = async(req,res)=>{
         reciever_id,
         sender_item_id,
         reciever_item_id,
-        message || null,
-      ]
+        message?.trim() || null,
+      ],
     );
+
     const swapRequest = result.rows[0];
-    await pool.query(
-      `INSERT INTO chats (swap_request_id)
-      VALUES ($1)`,[swapRequest.id]
+    await client.query(
+      `
+      INSERT INTO chats
+      (swap_request_id)
+      VALUES ($1)
+      `,
+      [swapRequest.id],
     );
-    res.status(201).json({
+    await client.query("COMMIT");
+
+    return res.status(201).json({
       success: true,
       message: "Swap request sent successfully",
-      request: result.rows[0],
+      request: swapRequest,
     });
-
   } catch (error) {
-    console.error(
-      "CREATE SWAP REQUEST ERROR:",
-      error
-    );
+    await client.query("ROLLBACK");
 
-    res.status(500).json({
+    console.error("CREATE SWAP REQUEST ERROR:", error);
+
+    return res.status(500).json({
       success: false,
       message: "Failed to send swap request",
     });
+  } finally {
+    client.release();
   }
 };
-
 
 // =====================================================
 // GET SENT REQUESTS
@@ -193,7 +218,7 @@ exports.getSentRequests = async (req, res) => {
 
       ORDER BY sr.created_at DESC
       `,
-      [userId]
+      [userId],
     );
 
     res.status(200).json({
@@ -201,12 +226,8 @@ exports.getSentRequests = async (req, res) => {
       count: result.rows.length,
       requests: result.rows,
     });
-
   } catch (error) {
-    console.error(
-      "GET SENT REQUESTS ERROR:",
-      error
-    );
+    console.error("GET SENT REQUESTS ERROR:", error);
 
     res.status(500).json({
       success: false,
@@ -215,9 +236,8 @@ exports.getSentRequests = async (req, res) => {
   }
 };
 
-
 // =====================================================
-// GET recieveD REQUESTS
+// GET recieved REQUESTS
 // =====================================================
 
 exports.getrecievedRequests = async (req, res) => {
@@ -264,7 +284,7 @@ exports.getrecievedRequests = async (req, res) => {
 
       ORDER BY sr.created_at DESC
       `,
-      [userId]
+      [userId],
     );
 
     res.status(200).json({
@@ -272,12 +292,8 @@ exports.getrecievedRequests = async (req, res) => {
       count: result.rows.length,
       requests: result.rows,
     });
-
   } catch (error) {
-    console.error(
-      "GET recieveD REQUESTS ERROR:",
-      error
-    );
+    console.error("GET recieveD REQUESTS ERROR:", error);
 
     res.status(500).json({
       success: false,
@@ -285,7 +301,6 @@ exports.getrecievedRequests = async (req, res) => {
     });
   }
 };
-
 
 // =====================================================
 // GET SINGLE REQUEST
@@ -341,7 +356,7 @@ exports.getSwapRequestById = async (req, res) => {
           OR sr.reciever_id = $2
         )
       `,
-      [requestId, userId]
+      [requestId, userId],
     );
 
     if (result.rows.length === 0) {
@@ -355,12 +370,8 @@ exports.getSwapRequestById = async (req, res) => {
       success: true,
       request: result.rows[0],
     });
-
   } catch (error) {
-    console.error(
-      "GET SWAP REQUEST ERROR:",
-      error
-    );
+    console.error("GET SWAP REQUEST ERROR:", error);
 
     res.status(500).json({
       success: false,
@@ -368,7 +379,6 @@ exports.getSwapRequestById = async (req, res) => {
     });
   }
 };
-
 
 // =====================================================
 // ACCEPT REQUEST
@@ -391,7 +401,7 @@ exports.acceptSwapRequest = async (req, res) => {
       WHERE id = $1
       FOR UPDATE
       `,
-      [requestId]
+      [requestId],
     );
 
     if (requestResult.rows.length === 0) {
@@ -406,30 +416,22 @@ exports.acceptSwapRequest = async (req, res) => {
     const request = requestResult.rows[0];
 
     // Only reciever can accept
-    if (
-      Number(request.reciever_id) !==
-      Number(recieverId)
-    ) {
+    if (Number(request.reciever_id) !== Number(recieverId)) {
       await client.query("ROLLBACK");
 
       return res.status(403).json({
         success: false,
-        message:
-          "Only the reciever can accept this request",
+        message: "Only the reciever can accept this request",
       });
     }
 
     // Must be pending
-    if (
-      request.status?.toUpperCase() !==
-      "PENDING"
-    ) {
+    if (request.status?.toUpperCase() !== "PENDING") {
       await client.query("ROLLBACK");
 
       return res.status(400).json({
         success: false,
-        message:
-          "This swap request is no longer pending",
+        message: "This swap request is no longer pending",
       });
     }
 
@@ -441,10 +443,7 @@ exports.acceptSwapRequest = async (req, res) => {
       WHERE id IN ($1, $2)
       FOR UPDATE
       `,
-      [
-        request.sender_item_id,
-        request.reciever_item_id,
-      ]
+      [request.sender_item_id, request.reciever_item_id],
     );
 
     if (itemsResult.rows.length !== 2) {
@@ -452,35 +451,27 @@ exports.acceptSwapRequest = async (req, res) => {
 
       return res.status(400).json({
         success: false,
-        message:
-          "One or more clothing items no longer exist",
+        message: "One or more clothing items no longer exist",
       });
     }
 
     const senderItem = itemsResult.rows.find(
-      (item) =>
-        Number(item.id) ===
-        Number(request.sender_item_id)
+      (item) => Number(item.id) === Number(request.sender_item_id),
     );
 
     const recieverItem = itemsResult.rows.find(
-      (item) =>
-        Number(item.id) ===
-        Number(request.reciever_item_id)
+      (item) => Number(item.id) === Number(request.reciever_item_id),
     );
 
     if (
-      senderItem.status?.toUpperCase() !==
-        "AVAILABLE" ||
-      recieverItem.status?.toUpperCase() !==
-        "AVAILABLE"
+      senderItem.status?.toUpperCase() !== "AVAILABLE" ||
+      recieverItem.status?.toUpperCase() !== "AVAILABLE"
     ) {
       await client.query("ROLLBACK");
 
       return res.status(400).json({
         success: false,
-        message:
-          "One or both clothing items are no longer available",
+        message: "One or both clothing items are no longer available",
       });
     }
 
@@ -492,10 +483,7 @@ exports.acceptSwapRequest = async (req, res) => {
           updated_at = CURRENT_TIMESTAMP
       WHERE id IN ($1, $2)
       `,
-      [
-        request.sender_item_id,
-        request.reciever_item_id,
-      ]
+      [request.sender_item_id, request.reciever_item_id],
     );
 
     // Accept this request
@@ -506,7 +494,7 @@ exports.acceptSwapRequest = async (req, res) => {
       WHERE id = $1
       RETURNING *
       `,
-      [requestId]
+      [requestId],
     );
 
     // Reject other pending requests involving
@@ -522,11 +510,7 @@ exports.acceptSwapRequest = async (req, res) => {
           OR reciever_item_id IN ($2, $3)
         )
       `,
-      [
-        requestId,
-        request.sender_item_id,
-        request.reciever_item_id,
-      ]
+      [requestId, request.sender_item_id, request.reciever_item_id],
     );
 
     // Update completed swaps for both users
@@ -537,39 +521,46 @@ exports.acceptSwapRequest = async (req, res) => {
           updated_at = CURRENT_TIMESTAMP
       WHERE id IN ($1, $2)
       `,
-      [
-        request.sender_id,
-        request.reciever_id,
-      ]
+      [request.sender_id, request.reciever_id],
     );
 
     await client.query("COMMIT");
+
+    // ----------------------------------------
+    // Send real-time status update
+    // ----------------------------------------
+    const io = req.app.get("io");
+
+    if (io) {
+      io.to(`user_${request.sender_id}`).emit("swap_status_updated", {
+        request_id: request.id,
+        status: "ACCEPTED",
+      });
+
+      io.to(`user_${request.reciever_id}`).emit("swap_status_updated", {
+        request_id: request.id,
+        status: "ACCEPTED",
+      });
+    }
 
     res.status(200).json({
       success: true,
       message: "Swap request accepted successfully",
       request: acceptedResult.rows[0],
     });
-
   } catch (error) {
-
     await client.query("ROLLBACK");
 
-    console.error(
-      "ACCEPT SWAP REQUEST ERROR:",
-      error
-    );
+    console.error("ACCEPT SWAP REQUEST ERROR:", error);
 
     res.status(500).json({
       success: false,
       message: "Failed to accept swap request",
     });
-
   } finally {
     client.release();
   }
 };
-
 
 // =====================================================
 // REJECT REQUEST
@@ -589,27 +580,45 @@ exports.rejectSwapRequest = async (req, res) => {
         AND status = 'PENDING'
       RETURNING *
       `,
-      [requestId, recieverId]
+      [requestId, recieverId],
     );
 
     if (result.rows.length === 0) {
       return res.status(404).json({
         success: false,
-        message:
-          "Pending swap request not found or you are not authorized",
+        message: "Pending swap request not found or you are not authorized",
+      });
+    }
+
+    const updatedRequest = result.rows[0];
+
+    // ----------------------------------------
+    // Send real-time status update
+    // ----------------------------------------
+    const io = req.app.get("io");
+
+    if (io) {
+      io.to(`user_${updatedRequest.sender_id}`).emit("swap_status_updated", {
+        request_id: updatedRequest.id,
+        status: "REJECTED",
+      });
+
+      io.to(`user_${updatedRequest.reciever_id}`).emit("swap_status_updated", {
+        request_id: updatedRequest.id,
+        status: "REJECTED",
       });
     }
 
     res.status(200).json({
       success: true,
       message: "Swap request rejected",
-      request: result.rows[0],
+      request: updatedRequest,
     });
-    }catch(error){
-        console.log(error);
-        res.status(500).json({
-            success:false,
-            message:"Server Error"
-        });
-    }
+  } catch (error) {
+    console.log(error);
+    res.status(500).json({
+      success: false,
+      message: "Server Error",
+    });
+  }
 };
