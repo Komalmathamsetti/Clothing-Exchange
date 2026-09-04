@@ -5,6 +5,7 @@ import {
   getSentRequests,
   acceptSwapRequest,
   rejectSwapRequest,
+  cancelSwapRequest,
 } from "../../services/swapServices";
 import {
   ArrowLeftRight,
@@ -92,6 +93,7 @@ function RequestCard({
   isrecieved,
   onAccept,
   onReject,
+  onCancel,
   onViewDetails,
   actionLoading,
 }) {
@@ -222,6 +224,18 @@ function RequestCard({
               </button>
             </div>
           ) : null}
+          {!isrecieved && status === "PENDING" ? (
+            <button
+              type="button"
+              onClick={() => onCancel(request.id)}
+              disabled={actionLoading === request.id}
+              className="inline-flex items-center justify-center rounded-xl border border-rose-200 px-4 py-2.5 text-sm font-bold text-rose-600 transition hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {actionLoading === request.id
+                ? "Cancelling..."
+                : "Cancel Request"}
+            </button>
+          ) : null}
         </div>
       </div>
     </article>
@@ -275,26 +289,24 @@ export default function SwapRequests() {
       return;
     }
 
-    socketRef.current = io("http://localhost:5000");
+    const socket = io("http://localhost:5000");
 
-    socketRef.current.on("connect", () => {
-      console.log("Swap socket connected:", socketRef.current.id);
+    socketRef.current = socket;
 
-      socketRef.current.emit("join_user", user.id);
+    // ----------------------------------------
+    // SOCKET CONNECTED
+    // ----------------------------------------
+    socket.on("connect", () => {
+      console.log("Swap socket connected:", socket.id);
+
+      socket.emit("join_user", user.id);
+
+      console.log(`Joined user room: user_${user.id}`);
     });
 
-    return () => {
-      if (socketRef.current) {
-        socketRef.current.disconnect();
-        socketRef.current = null;
-      }
-    };
-  }, []);
-  useEffect(() => {
-    if (!socketRef.current) {
-      return;
-    }
-
+    // ----------------------------------------
+    // SWAP STATUS UPDATED
+    // ----------------------------------------
     const handleSwapStatusUpdate = (data) => {
       console.log("REAL-TIME SWAP STATUS:", data);
 
@@ -304,9 +316,11 @@ export default function SwapRequests() {
         return;
       }
 
+      // ----------------------------------------
       // Update received requests
-      setrecievedRequests((prev) =>
-        prev.map((item) =>
+      // ----------------------------------------
+      setrecievedRequests((previousRequests) =>
+        previousRequests.map((item) =>
           Number(item.id) === Number(request_id)
             ? {
                 ...item,
@@ -316,9 +330,11 @@ export default function SwapRequests() {
         ),
       );
 
+      // ----------------------------------------
       // Update sent requests
-      setSentRequests((prev) =>
-        prev.map((item) =>
+      // ----------------------------------------
+      setSentRequests((previousRequests) =>
+        previousRequests.map((item) =>
           Number(item.id) === Number(request_id)
             ? {
                 ...item,
@@ -327,12 +343,36 @@ export default function SwapRequests() {
             : item,
         ),
       );
+
+      // ----------------------------------------
+      // Update currently opened request modal
+      // ----------------------------------------
+      setSelectedRequest((previousRequest) => {
+        if (
+          !previousRequest ||
+          Number(previousRequest.id) !== Number(request_id)
+        ) {
+          return previousRequest;
+        }
+
+        return {
+          ...previousRequest,
+          status: status,
+        };
+      });
     };
 
-    socketRef.current.on("swap_status_updated", handleSwapStatusUpdate);
+    socket.on("swap_status_updated", handleSwapStatusUpdate);
 
+    // ----------------------------------------
+    // CLEANUP
+    // ----------------------------------------
     return () => {
-      socketRef.current?.off("swap_status_updated", handleSwapStatusUpdate);
+      socket.off("swap_status_updated", handleSwapStatusUpdate);
+
+      socket.disconnect();
+
+      socketRef.current = null;
     };
   }, []);
   const handleAccept = async (request) => {
@@ -383,6 +423,43 @@ export default function SwapRequests() {
   };
   const handleViewDetails = (request) => {
     setSelectedRequest(request);
+  };
+  const handleCancel = async (requestId) => {
+    try {
+      setActionLoading(requestId);
+      const response = await cancelSwapRequest(requestId);
+      if (response.data.success) {
+        toast.success(response.data.message || "Swap request cancelled");
+        setSentRequests((previousRequests) =>
+          previousRequests.map((item) =>
+            Number(item.id) === Number(requestId)
+              ? {
+                  ...item,
+                  status: "CANCELLED",
+                }
+              : item,
+          ),
+        );
+        setSelectedRequest((previousRequest) => {
+          if (
+            !previousRequest ||
+            Number(previousRequest.id) !== Number(requestId)
+          ) {
+            return previousRequest;
+          }
+
+          return {
+            ...previousRequest,
+            status: "CANCELLED",
+          };
+        });
+      }
+    } catch (error) {
+      console.log(error);
+      toast.error(error.response?.data?.message || "Failed to cancel request");
+    } finally {
+      setActionLoading(null);
+    }
   };
   const user = JSON.parse(localStorage.getItem("user") || "null");
   if (loading) {
@@ -495,6 +572,7 @@ export default function SwapRequests() {
                   isrecieved={isrecieved}
                   onAccept={handleAccept}
                   onReject={handleReject}
+                  onCancel={handleCancel}
                   onViewDetails={handleViewDetails}
                   actionLoading={actionLoading}
                 />

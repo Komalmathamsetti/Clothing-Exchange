@@ -622,3 +622,104 @@ exports.rejectSwapRequest = async (req, res) => {
     });
   }
 };
+exports.cancelSwapRequest = async (req, res) => {
+  const client = await pool.connect();
+
+  try {
+    const requestId = req.params.id;
+    const userId = req.user.id;
+
+    await client.query("BEGIN");
+
+    const requestResult = await client.query(
+      `
+      SELECT *
+      FROM swap_requests
+      WHERE id = $1
+      FOR UPDATE
+      `,
+      [requestId],
+    );
+
+    if (requestResult.rows.length === 0) {
+      await client.query("ROLLBACK");
+
+      return res.status(404).json({
+        success: false,
+        message: "Swap request not found",
+      });
+    }
+
+    const request = requestResult.rows[0];
+
+    /*
+     * Only the sender who created the request
+     * can cancel it.
+     */
+    if (Number(request.sender_id) !== Number(userId)) {
+      await client.query("ROLLBACK");
+
+      return res.status(403).json({
+        success: false,
+        message: "You are not authorized to cancel this request",
+      });
+    }
+
+    /*
+     * Only pending requests can be cancelled.
+     */
+    if (request.status !== "PENDING") {
+      await client.query("ROLLBACK");
+
+      return res.status(400).json({
+        success: false,
+        message: `Cannot cancel a ${request.status} request`,
+      });
+    }
+
+    const updatedResult = await client.query(
+      `UPDATE swap_requests
+      SET
+      status = 'CANCELLED'
+      WHERE id = $1
+      RETURNING *
+      `,
+      [requestId],
+    );
+    await client.query("COMMIT");
+
+    const updatedRequest = updatedResult.rows[0];
+
+    /*
+     * Send real-time update to both users.
+     */
+    const io = req.app.get("io");
+
+    io.to(`user_${updatedRequest.sender_id}`).emit("swap_status_updated", {
+      request_id: updatedRequest.id,
+      status: "CANCELLED",
+    });
+
+    io.to(`user_${updatedRequest.reciever_id}`).emit("swap_status_updated", {
+      request_id: updatedRequest.id,
+      status: "CANCELLED",
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: "Swap request cancelled successfully",
+      request: updatedRequest,
+    });
+  } catch (error) {
+    await client.query("ROLLBACK");
+
+    console.log("CANCEL SWAP REQUEST ERROR:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Server Error",
+    });
+  } finally {
+    client.release();
+  }
+};

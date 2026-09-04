@@ -37,3 +37,6 @@ export const acceptSwapRequest = (id) => {
 export const rejectSwapRequest = (id) => {
   return API.put(`/${id}/reject`);
 };
+export const cancelSwapRequest = (id) =>{
+  return API.patch(`/${id}/cancel`);
+};

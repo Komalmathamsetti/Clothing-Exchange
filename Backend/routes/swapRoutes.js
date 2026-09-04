@@ -7,6 +7,7 @@ const {
   getSwapRequestById,
   acceptSwapRequest,
   rejectSwapRequest,
+  cancelSwapRequest
 } = require("../controllers/swapController");
 const { verifyToken } = require("../middleware/authMiddleware");
 // Send request
@@ -44,5 +45,11 @@ router.put(
   "/:id/reject",
   verifyToken,
   rejectSwapRequest
+);
+// Cancel
+router.patch(
+  "/:id/cancel",
+  verifyToken,
+  cancelSwapRequest
 );
 module.exports = router;
