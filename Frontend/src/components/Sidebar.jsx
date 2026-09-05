@@ -62,7 +62,7 @@ export default function Sidebar(){
           <NavLink to="/history" className={navClass}>📜 Swap History</NavLink>
           <NavLink to="/messages" className={navClass}>💬 Messages</NavLink>
           <NavLink to="/nearby-swaps" className={navClass}>📍 Nearby Swaps</NavLink>
-          <NavLink to="/caluculator" className={navClass}>💰 Value Calculator</NavLink>
+          <NavLink to="/value-calculator" className={navClass}>💰 Value Calculator</NavLink>
           <NavLink to="/notifications" className={navClass}>🔔 Notifications</NavLink>
         </nav>
 
