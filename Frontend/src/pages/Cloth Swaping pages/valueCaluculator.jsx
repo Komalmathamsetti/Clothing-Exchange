@@ -20,7 +20,7 @@ const ValueCalculator = () => {
   const [result, setResult] = useState(null);
   const [loading, setLoading] = useState(true);
   const [calculating, setCalculating] = useState(false);
-  const {user} = localStorage.getItem("user");
+  const user = JSON.parse(localStorage.getItem("user") || "null");
   // ------------------------------------
   // LOAD CATEGORIES
   // ------------------------------------
@@ -107,7 +107,7 @@ const ValueCalculator = () => {
   // ------------------------------------
 
   return (
-    <DashboardLayout showNavbar={true} user={user}>
+    <DashboardLayout user = {user} showNavbar={true}>
       <div className="mx-auto max-w-5xl">
         {/* -------------------------------- */}
         {/* PAGE HEADER */}
