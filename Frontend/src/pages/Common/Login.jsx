@@ -19,9 +19,14 @@ export default function Login() {
     try{
       const response = await loginUser(formData);
       toast.success(response.data.message);
-      localStorage.setItem("token",response.data.token);
+      const { token,user } = response.data
+      localStorage.setItem("token",token);
       localStorage.setItem("user",JSON.stringify(response.data.user));
-      navigate("/dashboard");
+      if(user.role === "ADMIN"){
+        navigate("/admin/dashboard");
+      }else{
+        navigate("/dashboard");
+      }
     }catch(error){
       toast.error(error.response?.data?.message || "Login Failed");
     }

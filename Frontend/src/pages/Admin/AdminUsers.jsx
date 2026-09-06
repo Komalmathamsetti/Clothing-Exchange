@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
 
-import DashboardLayout from "../../components/DashbaordLayout";
-import { getAdminUsers } from "../../services/adminService";
+import AdminLayout from "../../components/AdminLayout";
+import { getAdminUsers } from "../../services/adminServices";
 
 const AdminUsers = () => {
   const [users, setUsers] = useState([]);
@@ -32,7 +32,7 @@ const AdminUsers = () => {
   }, []);
 
   return (
-    <DashboardLayout>
+    <AdminLayout>
       <div className="p-6">
         {/* Header */}
 
@@ -177,7 +177,7 @@ const AdminUsers = () => {
           )}
         </div>
       </div>
-    </DashboardLayout>
+    </AdminLayout>
   );
 };
 

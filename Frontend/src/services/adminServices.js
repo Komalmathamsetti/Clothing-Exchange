@@ -12,8 +12,9 @@ API.interceptors.request.use((config) => {
 
     return config;
 });
-
-
+export const getAdminDashboard = ()=>{
+    return API.get("/dashboard");
+};
 export const getAdminUsers = () => {
     return API.get("/users");
 };

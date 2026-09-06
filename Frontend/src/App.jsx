@@ -15,6 +15,8 @@ import SwapHistory from "./pages/Cloth Swaping pages/SwapingHistory";
 import Messages from "./pages/Common/Messages";
 import NearbySwaps from "./pages/Cloth Swaping pages/NearbySwaps";
 import ValueCalculator from "./pages/Cloth Swaping pages/valueCaluculator";
+import AdminDashboard from "./pages/Admin/AdminDashboard";
+import AdminUsers from "./pages/Admin/AdminUsers";
 function App() {
   return (
     <BrowserRouter>
@@ -35,6 +37,8 @@ function App() {
         <Route path="/messages" element={<Messages/>}/>
         <Route path="/nearby-swaps" element={<NearbySwaps/>}/>
         <Route path="/value-calculator" element={<ValueCalculator/>}/>
+        <Route path="/admin/dashboard" element={<AdminDashboard/>}/>
+        <Route path="/admin/users" element={<AdminUsers/>}/>
       </Routes>
     </BrowserRouter>
   );
