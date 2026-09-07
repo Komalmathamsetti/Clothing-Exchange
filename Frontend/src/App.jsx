@@ -17,6 +17,8 @@ import NearbySwaps from "./pages/Cloth Swaping pages/NearbySwaps";
 import ValueCalculator from "./pages/Cloth Swaping pages/valueCaluculator";
 import AdminDashboard from "./pages/Admin/AdminDashboard";
 import AdminUsers from "./pages/Admin/AdminUsers";
+import AdminListings from "./pages/Admin/AdminListings";
+import AdminSwaps from "./pages/Admin/AdminSwaps";
 function App() {
   return (
     <BrowserRouter>
@@ -39,6 +41,8 @@ function App() {
         <Route path="/value-calculator" element={<ValueCalculator/>}/>
         <Route path="/admin/dashboard" element={<AdminDashboard/>}/>
         <Route path="/admin/users" element={<AdminUsers/>}/>
+        <Route path="/admin/listings" element={<AdminListings/>}/>
+         <Route path="/admin/swaps" element={<AdminSwaps/>}/>
       </Routes>
     </BrowserRouter>
   );

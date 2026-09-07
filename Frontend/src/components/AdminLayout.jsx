@@ -15,6 +15,11 @@ const AdminLayout = ({ children }) => {
 
   const menuItems = [
     {
+      name: "Home",
+      icon: "🏠",
+      path: "/",
+    },
+    {
       name: "Dashboard",
       icon: "📊",
       path: "/admin/dashboard",

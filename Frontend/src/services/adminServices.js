@@ -18,3 +18,9 @@ export const getAdminDashboard = ()=>{
 export const getAdminUsers = () => {
     return API.get("/users");
 };
+export const getAdminListings = ()=>{
+    return API.get("/listings");
+};
+export const getAdminSwaps = ()=>{
+    return API.get("/swaps");
+;}

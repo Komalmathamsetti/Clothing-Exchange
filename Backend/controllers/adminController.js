@@ -22,10 +22,6 @@ exports.getUsers = async (req, res) => {
 };
 exports.getDashboardStats = async (req, res) => {
   try {
-    // -----------------------------------------
-    // Total users
-    // -----------------------------------------
-
     const totalUsersResult = await pool.query(`
             SELECT COUNT(*)::int AS total_users
             FROM users
@@ -248,6 +244,143 @@ exports.getDashboardStats = async (req, res) => {
       success: false,
 
       message: "Failed to load admin dashboard",
+    });
+  }
+};
+exports.getAllListings = async (req, res) => {
+  try {
+    const result = await pool.query(`
+            SELECT
+                ci.id,
+                ci.owner_id,
+                ci.category_id,
+                c.name AS category,
+                ci.title,
+                ci.description,
+                ci.brand,
+                ci.size,
+                ci.clothing_condition,
+                ci.color,
+                ci.gender,
+                ci.estimated_value,
+                ci.city,
+                ci.state,
+                ci.status,
+                ci.created_at,
+                u.full_name AS owner_name,
+                u.email AS owner_email,
+
+                COALESCE(
+                    ARRAY_AGG(
+                        cim.image_url
+                        ORDER BY cim.id
+                    ) FILTER (
+                        WHERE cim.image_url IS NOT NULL
+                    ),
+                    '{}'
+                ) AS images
+
+            FROM clothing_items ci
+
+            LEFT JOIN categories c
+                ON ci.category_id = c.id
+
+            LEFT JOIN users u
+                ON ci.owner_id = u.id
+
+            LEFT JOIN clothing_images cim
+                ON ci.id = cim.clothing_id
+
+            GROUP BY
+                ci.id,
+                c.name,
+                u.full_name,
+                u.email
+
+            ORDER BY ci.created_at DESC
+        `);
+
+    return res.status(200).json({
+      success: true,
+
+      count: result.rows.length,
+
+      listings: result.rows,
+    });
+  } catch (error) {
+    console.log("ADMIN GET LISTINGS ERROR:", error);
+
+    return res.status(500).json({
+      success: false,
+
+      message: "Failed to load listings",
+    });
+  }
+};
+// ==========================================
+// GET ALL SWAPS
+// ==========================================
+
+exports.getAllSwaps = async (req, res) => {
+  try {
+    const result = await pool.query(`
+            SELECT
+
+                sr.id,
+
+                sr.sender_id,
+                sr.reciever_id,
+
+                sr.sender_item_id,
+                sr.reciever_item_id,
+
+                sr.message,
+                sr.status,
+                sr.created_at,
+
+                sender.full_name AS sender_name,
+                sender.email AS sender_email,
+
+                receiver.full_name AS receiver_name,
+                receiver.email AS receiver_email,
+
+                sender_item.title AS sender_item_title,
+                sender_item.estimated_value AS sender_item_value,
+
+                receiver_item.title AS receiver_item_title,
+                receiver_item.estimated_value AS receiver_item_value
+
+            FROM swap_requests sr
+
+            LEFT JOIN users sender
+                ON sr.sender_id = sender.id
+
+            LEFT JOIN users receiver
+                ON sr.reciever_id = receiver.id
+
+            LEFT JOIN clothing_items sender_item
+                ON sr.sender_item_id = sender_item.id
+
+            LEFT JOIN clothing_items receiver_item
+                ON sr.reciever_item_id = receiver_item.id
+
+            ORDER BY sr.created_at DESC
+        `);
+
+    return res.status(200).json({
+      success: true,
+
+      count: result.rows.length,
+
+      swaps: result.rows,
+    });
+  } catch (error) {
+    console.log("ADMIN GET SWAPS ERROR:", error);
+
+    return res.status(500).json({
+      success: false,
+
+      message: "Failed to load swaps",
     });
   }
 };

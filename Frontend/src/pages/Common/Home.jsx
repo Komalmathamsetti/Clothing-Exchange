@@ -163,7 +163,7 @@ export default function Home() {
     const role = String(user.role || user.user_role || "").toUpperCase();
 
     if (role === "ADMIN") {
-      navigate("/admin-dashboard");
+      navigate("/admin/dashboard");
     } else {
       navigate("/dashboard");
     }
