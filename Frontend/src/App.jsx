@@ -15,10 +15,15 @@ import SwapHistory from "./pages/Cloth Swaping pages/SwapingHistory";
 import Messages from "./pages/Common/Messages";
 import NearbySwaps from "./pages/Cloth Swaping pages/NearbySwaps";
 import ValueCalculator from "./pages/Cloth Swaping pages/valueCaluculator";
+import DisputeDetails from "./pages/Cloth Swaping pages/DisputeDetails";
+import MyDisputes from "./pages/Cloth Swaping pages/MyDisputes";
+import RaiseDisputes from "./pages/Cloth Swaping pages/RaiseDisputes";
 import AdminDashboard from "./pages/Admin/AdminDashboard";
 import AdminUsers from "./pages/Admin/AdminUsers";
 import AdminListings from "./pages/Admin/AdminListings";
 import AdminSwaps from "./pages/Admin/AdminSwaps";
+import AdminAnalytics from "./pages/Admin/AdminAnalytics";
+import AdminDisputes from "./pages/Admin/AdminDisputes";
 function App() {
   return (
     <BrowserRouter>
@@ -39,10 +44,16 @@ function App() {
         <Route path="/messages" element={<Messages/>}/>
         <Route path="/nearby-swaps" element={<NearbySwaps/>}/>
         <Route path="/value-calculator" element={<ValueCalculator/>}/>
+        <Route path="/raise-dispute" element={<RaiseDisputes />}/>
+        <Route path="/disputes" element={<MyDisputes />}/>
+        <Route path="/disputes/:id" element={<DisputeDetails />}/>
         <Route path="/admin/dashboard" element={<AdminDashboard/>}/>
         <Route path="/admin/users" element={<AdminUsers/>}/>
         <Route path="/admin/listings" element={<AdminListings/>}/>
-         <Route path="/admin/swaps" element={<AdminSwaps/>}/>
+        <Route path="/admin/swaps" element={<AdminSwaps/>}/>
+        <Route path="/admin/analytics" element={<AdminAnalytics/>}/>
+        <Route path="/admin/disputes" element={<AdminDisputes />}/>
+
       </Routes>
     </BrowserRouter>
   );

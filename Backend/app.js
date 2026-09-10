@@ -12,6 +12,7 @@ const dashboardRoutes = require("./routes/dashboardRoutes");
 const nearbyRoutes = require("./routes/nearbyRoutes");
 const valueRoutes = require("./routes/valueRoutes");
 const adminRoutes = require("./routes/adminRoutes");
+const disputeRoutes = require("./routes/disputeRoutes");
 const app = express();
 app.use(cors());
 app.use(helmet());
@@ -26,6 +27,7 @@ app.use("/api/chats",chatRoutes);
 app.use("/api/nearby",nearbyRoutes);
 app.use("/api/value-caluculator",valueRoutes);
 app.use("/api/admin",adminRoutes);
+app.use("/api/disputes",disputeRoutes);
 app.get("/",(req,res)=>{
    res.status(200).json({
     success:true,

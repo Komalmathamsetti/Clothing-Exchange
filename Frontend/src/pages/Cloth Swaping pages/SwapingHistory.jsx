@@ -1,4 +1,5 @@
-import {useState,useEffect} from "react";
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   ArrowLeftRight,
   CalendarDays,
@@ -11,7 +12,10 @@ import {
   XCircle,
 } from "lucide-react";
 import toast from "react-hot-toast";
-import { getSentRequests,getRecievedRequests } from "../../services/swapServices";
+import {
+  getSentRequests,
+  getRecievedRequests,
+} from "../../services/swapServices";
 import DashboardLayout from "../../components/DashbaordLayout";
 const statusStyles = {
   ACCEPTED: "bg-emerald-50 text-emerald-700 ring-emerald-600/20",
@@ -27,9 +31,7 @@ function ClothingItem({ item }) {
   if (!item || !item.title) {
     return (
       <div className="flex-1 rounded-2xl border border-slate-200 bg-slate-50 p-4">
-        <p className="text-sm text-slate-400">
-          Item unavailable
-        </p>
+        <p className="text-sm text-slate-400">Item unavailable</p>
       </div>
     );
   }
@@ -70,8 +72,9 @@ function ClothingItem({ item }) {
 }
 
 function SwapHistoryCard({ swap }) {
+  const navigate = useNavigate();
   const status = String(
-    swap.status || swap.swap_status || "PENDING"
+    swap.status || swap.swap_status || "PENDING",
   ).toUpperCase();
 
   const statusClass =
@@ -95,7 +98,7 @@ function SwapHistoryCard({ swap }) {
     brand: swap.reciever_item_brand,
     size: swap.reciever_item_size,
     condition: swap.reciever_item_condition,
-  }
+  };
   const swapDate =
     swap.swap_date || swap.date || swap.created_at || swap.updated_at;
 
@@ -137,7 +140,13 @@ function SwapHistoryCard({ swap }) {
         {swapDate ? (
           <div className="mt-4 inline-flex items-center gap-2 text-xs text-slate-400">
             <CalendarDays size={14} />
-            <span>{new Date(swapDate).toLocaleDateString("en-IN", {day: "numeric",month: "short",year: "numeric",})}</span>
+            <span>
+              {new Date(swapDate).toLocaleDateString("en-IN", {
+                day: "numeric",
+                month: "short",
+                year: "numeric",
+              })}
+            </span>
           </div>
         ) : null}
       </div>
@@ -162,9 +171,7 @@ function SwapHistoryCard({ swap }) {
               <p className="mb-1 text-xs font-bold uppercase tracking-[0.12em] text-slate-400">
                 Message
               </p>
-              <p className="text-sm leading-6 text-slate-600">
-                {swap.message}
-              </p>
+              <p className="text-sm leading-6 text-slate-600">{swap.message}</p>
             </div>
           </div>
         ) : (
@@ -173,49 +180,67 @@ function SwapHistoryCard({ swap }) {
             No message was added to this swap.
           </div>
         )}
+        {status === "ACCEPTED" && (
+          <div className="border-t border-slate-100 pt-4">
+            <button
+              type="button"
+              onClick={() =>
+                navigate("/raise-dispute", {
+                  state: {
+                    swap,
+                  },
+                })
+              }
+              className="inline-flex items-center gap-2 rounded-xl border border-rose-200 bg-rose-50 px-4 py-2.5 text-sm font-bold text-rose-600 transition hover:border-rose-300 hover:bg-rose-100"
+            >
+              <MessageSquare size={16} />
+              Raise Dispute
+            </button>
+          </div>
+        )}
       </div>
     </article>
   );
 }
 
 export default function SwapHistory() {
-  const [history,setHistory] = useState([]);
-  const [activeFilter,setActiveFilter] = useState("all");
-  const [loading,setLoading] = useState(true);
+  const [history, setHistory] = useState([]);
+  const [activeFilter, setActiveFilter] = useState("all");
+  const [loading, setLoading] = useState(true);
   const user = JSON.parse(localStorage.getItem("user") || "null");
-  useEffect(()=>{
-    const loadHistory = async()=>{
-      try{
+  useEffect(() => {
+    const loadHistory = async () => {
+      try {
         setLoading(true);
-        const [sendResponse,recievedResponse]=await Promise.all([
+        const [sendResponse, recievedResponse] = await Promise.all([
           getSentRequests(),
-          getRecievedRequests()
+          getRecievedRequests(),
         ]);
         const sent = sendResponse.data?.requests || [];
         const recieved = recievedResponse.data?.requests || [];
-        const combined = [...sent,...recieved,];
+        const combined = [...sent, ...recieved];
         const uniqueHistory = Array.from(
-          new Map(
-            combined.map((swap)=>[swap.id,swap])
-          ).values()
+          new Map(combined.map((swap) => [swap.id, swap])).values(),
         );
         setHistory(uniqueHistory);
-      }catch(error){
-        console.error("LOAD SWAP HISTORY ERROR:",error);
-        toast.error(error.response?.data?.message || "Failed to load swap history");
-      }finally{
+      } catch (error) {
+        console.error("LOAD SWAP HISTORY ERROR:", error);
+        toast.error(
+          error.response?.data?.message || "Failed to load swap history",
+        );
+      } finally {
         setLoading(false);
       }
     };
     loadHistory();
-  },[]);
+  }, []);
   const filteredHistory =
     activeFilter === "all"
       ? history || []
       : (history || []).filter(
           (swap) =>
             String(swap.status || swap.swap_status || "").toLowerCase() ===
-            activeFilter.toLowerCase()
+            activeFilter.toLowerCase(),
         );
 
   const filters = [
@@ -236,21 +261,21 @@ export default function SwapHistory() {
     },
   ];
   if (loading) {
-  return (
-    <DashboardLayout user={user} showNavbar={true}>
-      <main className="min-h-full bg-slate-50 px-4 py-6 sm:px-6 lg:px-8">
-        <div className="flex min-h-[60vh] items-center justify-center">
-          <div className="text-center">
-            <div className="mx-auto h-10 w-10 animate-spin rounded-full border-4 border-emerald-200 border-t-emerald-600" />
+    return (
+      <DashboardLayout user={user} showNavbar={true}>
+        <main className="min-h-full bg-slate-50 px-4 py-6 sm:px-6 lg:px-8">
+          <div className="flex min-h-[60vh] items-center justify-center">
+            <div className="text-center">
+              <div className="mx-auto h-10 w-10 animate-spin rounded-full border-4 border-emerald-200 border-t-emerald-600" />
 
-            <p className="mt-4 text-sm font-semibold text-slate-500">
-              Loading swap history...
-            </p>
+              <p className="mt-4 text-sm font-semibold text-slate-500">
+                Loading swap history...
+              </p>
+            </div>
           </div>
-        </div>
-      </main>
-    </DashboardLayout>
-  );
+        </main>
+      </DashboardLayout>
+    );
   }
   return (
     <DashboardLayout user={user} showNavbar={true}>
@@ -314,7 +339,7 @@ export default function SwapHistory() {
             </section>
           ) : (
             <section className="grid gap-5 xl:grid-cols-2">
-              {filteredHistory.map((swap,index) => (
+              {filteredHistory.map((swap, index) => (
                 <SwapHistoryCard
                   key={swap.id ?? swap.swap_id ?? `swap-${index}`}
                   swap={swap}

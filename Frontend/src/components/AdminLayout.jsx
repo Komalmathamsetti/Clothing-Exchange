@@ -1,5 +1,5 @@
 import { Link, useLocation, useNavigate } from "react-router-dom";
-
+import Swal from "sweetalert2";
 const AdminLayout = ({ children }) => {
   const location = useLocation();
   const navigate = useNavigate();
@@ -7,10 +7,34 @@ const AdminLayout = ({ children }) => {
   const user = JSON.parse(localStorage.getItem("user") || "{}");
 
   const handleLogout = () => {
-    localStorage.removeItem("token");
-    localStorage.removeItem("user");
+    Swal.fire({
+      title: "Logout?",
+      text: "Are you sure you want to logout from the admin panel?",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonColor: "#059669",
+      cancelButtonColor: "#64748b",
+      confirmButtonText: "Yes, Logout",
+      cancelButtonText: "Cancel",
+      reverseButtons: true,
+      background: "#ffffff",
+      color: "#0f172a",
+    }).then((result) => {
+      if (result.isConfirmed) {
+        localStorage.removeItem("token");
+        localStorage.removeItem("user");
 
-    navigate("/login");
+        Swal.fire({
+          title: "Logged Out",
+          text: "You have been successfully logged out.",
+          icon: "success",
+          timer: 1200,
+          showConfirmButton: false,
+        }).then(() => {
+          navigate("/login");
+        });
+      }
+    });
   };
 
   const menuItems = [

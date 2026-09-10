@@ -2,21 +2,81 @@ const pool = require("../config/db");
 exports.getUsers = async (req, res) => {
   try {
     const result = await pool.query(`
-        SELECT
-          id,full_name,email,role,phone,city,state,rating,completed_swaps,created_at
-          FROM users
-          ORDER BY created_at DESC
+            SELECT
+                id,
+                full_name,
+                email,
+                phone,
+                city,
+                state,
+                profile_image,
+                rating,
+                completed_swaps,
+                role,
+                is_active,
+                created_at,
+                updated_at
+            FROM users
+            ORDER BY created_at DESC
         `);
+
     return res.status(200).json({
       success: true,
       count: result.rows.length,
       users: result.rows,
     });
   } catch (error) {
-    console.log(error);
+    console.error("ADMIN GET USERS ERROR:", error);
+
     return res.status(500).json({
       success: false,
-      message: "Server Error",
+      message: "Failed to load users",
+    });
+  }
+};
+exports.getUserById = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const result = await pool.query(
+      `
+            SELECT
+                id,
+                full_name,
+                email,
+                phone,
+                city,
+                state,
+                profile_image,
+                rating,
+                completed_swaps,
+                role,
+                is_active,
+                created_at,
+                updated_at
+            FROM users
+            WHERE id = $1
+            `,
+      [id],
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      user: result.rows[0],
+    });
+  } catch (error) {
+    console.error("ADMIN GET USER ERROR:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Failed to load user",
     });
   }
 };
@@ -247,6 +307,87 @@ exports.getDashboardStats = async (req, res) => {
     });
   }
 };
+exports.updateUserStatus = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { is_active } = req.body;
+
+    if (typeof is_active !== "boolean") {
+      return res.status(400).json({
+        success: false,
+        message: "is_active must be true or false",
+      });
+    }
+
+    // Prevent admin from suspending themselves
+    if (Number(id) === Number(req.user.id)) {
+      return res.status(400).json({
+        success: false,
+        message: "You cannot change your own account status",
+      });
+    }
+
+    // Check whether user exists
+    const existingUser = await pool.query(
+      `
+            SELECT id, full_name, role, is_active
+            FROM users
+            WHERE id = $1
+            `,
+      [id],
+    );
+
+    if (existingUser.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
+      });
+    }
+
+    const user = existingUser.rows[0];
+
+    // Protect administrator accounts
+    if (user.role === "ADMIN") {
+      return res.status(403).json({
+        success: false,
+        message: "Administrator accounts cannot be suspended",
+      });
+    }
+
+    const result = await pool.query(
+      `
+            UPDATE users
+            SET
+                is_active = $1,
+                updated_at = CURRENT_TIMESTAMP
+            WHERE id = $2
+            RETURNING
+                id,
+                full_name,
+                email,
+                role,
+                is_active,
+                updated_at
+            `,
+      [is_active, id],
+    );
+
+    return res.status(200).json({
+      success: true,
+      message: is_active
+        ? "User activated successfully"
+        : "User suspended successfully",
+      user: result.rows[0],
+    });
+  } catch (error) {
+    console.error("ADMIN UPDATE USER STATUS ERROR:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Failed to update user status",
+    });
+  }
+};
 exports.getAllListings = async (req, res) => {
   try {
     const result = await pool.query(`
@@ -381,6 +522,325 @@ exports.getAllSwaps = async (req, res) => {
       success: false,
 
       message: "Failed to load swaps",
+    });
+  }
+};
+exports.removeListing = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // Check whether listing exists
+    const existingListing = await pool.query(
+      `
+            SELECT
+                id,
+                title,
+                owner_id,
+                status
+            FROM clothing_items
+            WHERE id = $1
+            `,
+      [id],
+    );
+
+    if (existingListing.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: "Listing not found",
+      });
+    }
+
+    const listing = existingListing.rows[0];
+
+    // Already removed
+    if (listing.status === "REMOVED") {
+      return res.status(400).json({
+        success: false,
+        message: "Listing has already been removed",
+      });
+    }
+
+    // Remove listing
+    const result = await pool.query(
+      `
+            UPDATE clothing_items
+            SET
+                status = 'REMOVED',
+                updated_at = CURRENT_TIMESTAMP
+            WHERE id = $1
+            RETURNING
+                id,
+                title,
+                owner_id,
+                status,
+                updated_at
+            `,
+      [id],
+    );
+
+    return res.status(200).json({
+      success: true,
+
+      message: "Listing removed successfully",
+
+      listing: result.rows[0],
+    });
+  } catch (error) {
+    console.error("ADMIN REMOVE LISTING ERROR:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Failed to remove listing",
+    });
+  }
+};
+exports.getAnalytics = async (req, res) => {
+  try {
+    const days = Number(req.query.days) || 30;
+
+    const allowedDays = [7, 30, 90, 365];
+
+    const selectedDays = allowedDays.includes(days) ? days : 30;
+
+    /*
+        ==================================================
+        PLATFORM SUMMARY
+        ==================================================
+        */
+
+    const summaryQuery = pool.query(`
+            SELECT
+
+                (SELECT COUNT(*)
+                 FROM users) AS total_users,
+
+                (SELECT COUNT(*)
+                 FROM users
+                 WHERE is_active = true) AS active_users,
+
+                (SELECT COUNT(*)
+                 FROM users
+                 WHERE is_active = false) AS suspended_users,
+
+                (SELECT COUNT(*)
+                 FROM clothing_items) AS total_listings,
+
+                (SELECT COUNT(*)
+                 FROM clothing_items
+                 WHERE status = 'AVAILABLE') AS available_listings,
+
+                (SELECT COUNT(*)
+                 FROM clothing_items
+                 WHERE status = 'EXCHANGED') AS exchanged_listings,
+
+                (SELECT COUNT(*)
+                 FROM clothing_items
+                 WHERE status = 'REMOVED') AS removed_listings,
+
+                (SELECT COUNT(*)
+                 FROM swap_requests) AS total_swap_requests,
+
+                (SELECT COUNT(*)
+                 FROM swap_requests
+                 WHERE status = 'PENDING') AS pending_swaps,
+
+                (SELECT COUNT(*)
+                 FROM swap_requests
+                 WHERE status = 'ACCEPTED') AS completed_swaps,
+
+                (SELECT COUNT(*)
+                 FROM swap_requests
+                 WHERE status = 'REJECTED') AS rejected_swaps,
+
+                (SELECT COUNT(*)
+                 FROM swap_requests
+                 WHERE status = 'CANCELLED') AS cancelled_swaps,
+
+                (SELECT COALESCE(SUM(estimated_value), 0)
+                 FROM clothing_items) AS total_listing_value,
+
+                (SELECT COALESCE(AVG(estimated_value), 0)
+                 FROM clothing_items
+                 WHERE estimated_value IS NOT NULL) AS average_listing_value
+        `);
+
+    /*
+        ==================================================
+        ACTIVITY OVER TIME
+        ==================================================
+        */
+
+    const activityQuery = pool.query(
+      `
+            WITH date_series AS (
+
+                SELECT generate_series(
+                    CURRENT_DATE - ($1::integer - 1),
+                    CURRENT_DATE,
+                    INTERVAL '1 day'
+                )::date AS date
+
+            )
+
+            SELECT
+                ds.date,
+
+                (
+                    SELECT COUNT(*)
+                    FROM users u
+                    WHERE u.created_at::date = ds.date
+                ) AS new_users,
+
+                (
+                    SELECT COUNT(*)
+                    FROM clothing_items ci
+                    WHERE ci.created_at::date = ds.date
+                ) AS new_listings,
+
+                (
+                    SELECT COUNT(*)
+                    FROM swap_requests sr
+                    WHERE sr.created_at::date = ds.date
+                ) AS swap_requests
+
+            FROM date_series ds
+
+            ORDER BY ds.date
+            `,
+      [selectedDays],
+    );
+
+    /*
+        ==================================================
+        LISTING STATUS
+        ==================================================
+        */
+
+    const listingStatusQuery = pool.query(`
+            SELECT
+                status,
+                COUNT(*) AS count
+            FROM clothing_items
+            GROUP BY status
+            ORDER BY count DESC
+        `);
+
+    /*
+        ==================================================
+        SWAP STATUS
+        ==================================================
+        */
+
+    const swapStatusQuery = pool.query(`
+            SELECT
+                status,
+                COUNT(*) AS count
+            FROM swap_requests
+            GROUP BY status
+            ORDER BY count DESC
+        `);
+
+    /*
+        ==================================================
+        POPULAR CATEGORIES
+        ==================================================
+        */
+
+    const categoryQuery = pool.query(`
+            SELECT
+                COALESCE(c.name, 'Uncategorized') AS category,
+                COUNT(ci.id) AS count
+            FROM clothing_items ci
+            LEFT JOIN categories c
+                ON ci.category_id = c.id
+            GROUP BY c.name
+            ORDER BY count DESC
+            LIMIT 8
+        `);
+
+    /*
+        ==================================================
+        TOP LOCATIONS
+        ==================================================
+        */
+
+    const locationQuery = pool.query(`
+            SELECT
+                COALESCE(city, 'Unknown') AS city,
+                COUNT(*) AS count
+            FROM users
+            WHERE city IS NOT NULL
+              AND TRIM(city) <> ''
+            GROUP BY city
+            ORDER BY count DESC
+            LIMIT 8
+        `);
+
+    /*
+        ==================================================
+        CONDITION DISTRIBUTION
+        ==================================================
+        */
+
+    const conditionQuery = pool.query(`
+            SELECT
+                clothing_condition AS condition,
+                COUNT(*) AS count
+            FROM clothing_items
+            GROUP BY clothing_condition
+            ORDER BY count DESC
+        `);
+
+    const [
+      summaryResult,
+      activityResult,
+      listingStatusResult,
+      swapStatusResult,
+      categoryResult,
+      locationResult,
+      conditionResult,
+    ] = await Promise.all([
+      summaryQuery,
+      activityQuery,
+      listingStatusQuery,
+      swapStatusQuery,
+      categoryQuery,
+      locationQuery,
+      conditionQuery,
+    ]);
+
+    /*
+        ==================================================
+        RESPONSE
+        ==================================================
+        */
+
+    return res.status(200).json({
+      success: true,
+
+      period: selectedDays,
+
+      summary: summaryResult.rows[0],
+
+      activity: activityResult.rows,
+
+      listingStatus: listingStatusResult.rows,
+
+      swapStatus: swapStatusResult.rows,
+
+      categories: categoryResult.rows,
+
+      locations: locationResult.rows,
+
+      conditions: conditionResult.rows,
+    });
+  } catch (error) {
+    console.error("ADMIN ANALYTICS ERROR:", error);
+
+    return res.status(500).json({
+      success: false,
+
+      message: "Failed to load analytics",
     });
   }
 };
