@@ -49,7 +49,7 @@ export default function Sidebar() {
           </div>
         </div>
 
-        <nav className="flex-1 space-y-1 px-4 py-6">
+        <nav className="min-h-0 flex-1 space-y-1 overflow-y-auto px-4 py-6">
           <NavLink to="/" className={navClass}>
             🏠 Home
           </NavLink>
@@ -91,7 +91,7 @@ export default function Sidebar() {
           </NavLink>
         </nav>
 
-        <div className="border-t border-slate-100 p-4">
+        <div className="shrink-0 border-t border-slate-100 p-4">
           <button
             onClick={handleLogout}
             className="flex items-center gap-3 rounded-xl px-4 py-3 text-sm text-slate-500 hover:bg-red-50 hover:text-red-600 cursor-pointer"

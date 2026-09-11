@@ -3,14 +3,15 @@ import { useNavigate, useParams } from "react-router-dom";
 import { ArrowLeft, Send, RefreshCw, User, ShieldCheck } from "lucide-react";
 import toast from "react-hot-toast";
 
-import DashboardLayout from "../../components/DashbaordLayout";
+import AdminLayout from "../../components/AdminLayout";
 
 import {
   getDisputeById,
   addDisputeMessage,
+  updateDisputeStatus,
 } from "../../services/disputeServices";
 
-const DisputeDetails = () => {
+const AdminDisputeDetails = () => {
   const { id } = useParams();
   const navigate = useNavigate();
 
@@ -23,7 +24,11 @@ const DisputeDetails = () => {
 
   const [message, setMessage] = useState("");
 
-  const currentUser = JSON.parse(localStorage.getItem("user") || "{}");
+  const currentUser = JSON.parse(
+    localStorage.getItem("user") || "{}"
+  );
+
+  // Initial loading
   useEffect(() => {
     let cancelled = false;
 
@@ -38,9 +43,12 @@ const DisputeDetails = () => {
       } catch (error) {
         if (cancelled) return;
 
-        console.error("GET DISPUTE DETAILS ERROR:", error);
+        console.error("ADMIN DISPUTE DETAILS ERROR:", error);
 
-        toast.error(error.response?.data?.message || "Failed to load dispute");
+        toast.error(
+          error.response?.data?.message ||
+            "Failed to load dispute"
+        );
       } finally {
         if (!cancelled) {
           setLoading(false);
@@ -54,6 +62,8 @@ const DisputeDetails = () => {
       cancelled = true;
     };
   }, [id]);
+
+  // Manual refresh
   const handleRefresh = async () => {
     try {
       setRefreshing(true);
@@ -65,13 +75,18 @@ const DisputeDetails = () => {
 
       toast.success("Dispute refreshed");
     } catch (error) {
-      console.error("REFRESH DISPUTE ERROR:", error);
+      console.error("REFRESH ADMIN DISPUTE ERROR:", error);
 
-      toast.error(error.response?.data?.message || "Failed to refresh dispute");
+      toast.error(
+        error.response?.data?.message ||
+          "Failed to refresh dispute"
+      );
     } finally {
       setRefreshing(false);
     }
   };
+
+  // Send admin reply
   const handleSendMessage = async (e) => {
     e.preventDefault();
 
@@ -82,26 +97,49 @@ const DisputeDetails = () => {
     try {
       setSending(true);
 
-      const response = await addDisputeMessage(id, message.trim());
+      const response = await addDisputeMessage(
+        id,
+        message.trim()
+      );
 
-      const newMessage = response.data.disputeMessage;
-
-      setMessages((previous) => [...previous, newMessage]);
+      setMessages((previous) => [
+        ...previous,
+        response.data.disputeMessage,
+      ]);
 
       setMessage("");
 
       toast.success("Reply sent");
 
-      // Refresh dispute to update status
       const refreshed = await getDisputeById(id);
 
       setDispute(refreshed.data.dispute);
+      setMessages(refreshed.data.messages || []);
     } catch (error) {
-      console.error("SEND DISPUTE MESSAGE ERROR:", error);
+      console.error("ADMIN SEND MESSAGE ERROR:", error);
 
-      toast.error(error.response?.data?.message || "Failed to send reply");
+      toast.error(
+        error.response?.data?.message ||
+          "Failed to send reply"
+      );
     } finally {
       setSending(false);
+    }
+  };
+  const handleStatusChange = async (newStatus) => {
+    try {
+      await updateDisputeStatus(id, newStatus);
+
+      setDispute((previous) => ({
+        ...previous,
+        status: newStatus,
+      }));
+
+      toast.success("Dispute status updated");
+    } catch (error) {
+      console.error("ADMIN STATUS ERROR:", error);
+
+      toast.error(error.response?.data?.message || "Failed to update status");
     }
   };
 
@@ -126,65 +164,78 @@ const DisputeDetails = () => {
 
   if (loading) {
     return (
-      <DashboardLayout>
-        <div className="min-h-screen bg-slate-50 p-6 flex items-center justify-center">
-          <RefreshCw size={30} className="animate-spin text-slate-500" />
+      <AdminLayout>
+        <div className="flex min-h-[70vh] items-center justify-center bg-slate-50">
+          <div className="text-center">
+            <RefreshCw
+              size={32}
+              className="mx-auto animate-spin text-slate-500"
+            />
+
+            <p className="mt-4 text-sm font-medium text-slate-500">
+              Loading dispute...
+            </p>
+          </div>
         </div>
-      </DashboardLayout>
+      </AdminLayout>
     );
   }
 
   if (!dispute) {
     return (
-      <DashboardLayout>
-        <div className="min-h-screen bg-slate-50 p-6">
-          <div className="max-w-4xl mx-auto bg-white rounded-2xl p-10 text-center">
-            <h2 className="text-xl font-semibold">Dispute not found</h2>
+      <AdminLayout>
+        <div className="flex min-h-[70vh] items-center justify-center bg-slate-50">
+          <div className="text-center">
+            <p className="text-slate-500">Dispute not found.</p>
 
             <button
-              onClick={() => navigate("/disputes")}
-              className="mt-4 px-5 py-2 bg-slate-900 text-white rounded-xl"
+              type="button"
+              onClick={() => navigate("/admin/disputes")}
+              className="mt-4 rounded-xl bg-slate-900 px-5 py-2.5 text-sm font-semibold text-white"
             >
               Back to Disputes
             </button>
           </div>
         </div>
-      </DashboardLayout>
+      </AdminLayout>
     );
   }
 
   const isClosed = dispute.status === "CLOSED";
 
   return (
-    <DashboardLayout>
+    <AdminLayout>
       <div className="min-h-screen bg-slate-50 p-6">
-        <div className="max-w-5xl mx-auto">
-          {/* Top */}
-          <div className="flex items-center justify-between mb-6">
+        <div className="mx-auto max-w-6xl">
+          {/* Header */}
+          <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <button
-              onClick={() => navigate("/disputes")}
-              className="flex items-center gap-2 text-slate-600 hover:text-slate-900"
+              type="button"
+              onClick={() => navigate("/admin/disputes")}
+              className="inline-flex w-fit items-center gap-2 text-sm font-semibold text-slate-600 hover:text-slate-900"
             >
               <ArrowLeft size={18} />
-              My Disputes
+              Back to Disputes
             </button>
 
             <button
+              type="button"
               onClick={handleRefresh}
               disabled={refreshing}
-              className="flex items-center gap-2 px-3 py-2 bg-white border border-slate-300 rounded-xl"
+              className="inline-flex w-fit items-center gap-2 rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-60"
             >
               <RefreshCw
-                size={16}
+                size={17}
                 className={refreshing ? "animate-spin" : ""}
               />
-              Refresh
+
+              {refreshing ? "Refreshing..." : "Refresh"}
             </button>
           </div>
 
-          {/* Dispute information */}
-          <div className="bg-white border border-slate-200 rounded-2xl p-6 mb-5">
-            <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
+          {/* Dispute Information */}
+          <section className="mb-5 rounded-2xl border border-slate-200 bg-white p-6">
+            <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
               <div>
                 <p className="text-sm text-slate-500">
                   Dispute #{dispute.id}
@@ -192,51 +243,86 @@ const DisputeDetails = () => {
                   Swap #{dispute.swap_request_id}
                 </p>
 
-                <h1 className="text-2xl font-bold text-slate-900 mt-1">
+                <h1 className="mt-1 text-2xl font-bold text-slate-900">
                   {dispute.subject}
                 </h1>
               </div>
 
               <span
-                className={`px-4 py-2 rounded-full text-sm font-semibold ${getStatusStyle(dispute.status)}`}
+                className={`rounded-full px-4 py-2 text-sm font-semibold ${getStatusStyle(
+                  dispute.status,
+                )}`}
               >
                 {dispute.status.replace("_", " ")}
               </span>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6">
-              <div className="bg-slate-50 rounded-xl p-4">
+            {/* Users */}
+            <div className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-2">
+              <div className="rounded-xl bg-slate-50 p-4">
                 <p className="text-xs text-slate-500">Raised By</p>
 
-                <p className="font-semibold text-slate-800 mt-1">
+                <p className="mt-1 font-semibold text-slate-800">
                   {dispute.raised_by_name}
+                </p>
+
+                <p className="mt-1 text-xs text-slate-500">
+                  {dispute.raised_by_email}
                 </p>
               </div>
 
-              <div className="bg-slate-50 rounded-xl p-4">
+              <div className="rounded-xl bg-slate-50 p-4">
                 <p className="text-xs text-slate-500">Against</p>
 
-                <p className="font-semibold text-slate-800 mt-1">
+                <p className="mt-1 font-semibold text-slate-800">
                   {dispute.against_user_name}
+                </p>
+
+                <p className="mt-1 text-xs text-slate-500">
+                  {dispute.against_user_email}
                 </p>
               </div>
             </div>
 
+            {/* Original complaint */}
             <div className="mt-5">
-              <p className="text-sm font-semibold text-slate-700 mb-2">
+              <p className="mb-2 text-sm font-semibold text-slate-700">
                 Original Complaint
               </p>
 
-              <div className="bg-slate-50 rounded-xl p-4 text-sm text-slate-700 whitespace-pre-wrap">
+              <div className="whitespace-pre-wrap rounded-xl bg-slate-50 p-4 text-sm leading-6 text-slate-700">
                 {dispute.description}
               </div>
             </div>
-          </div>
+
+            {/* Admin status control */}
+            <div className="mt-6 border-t border-slate-100 pt-5">
+              <label className="mb-2 block text-sm font-semibold text-slate-700">
+                Manage Status
+              </label>
+
+              <select
+                value={dispute.status}
+                onChange={(e) => handleStatusChange(e.target.value)}
+                className="rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 outline-none focus:border-emerald-500"
+              >
+                <option value="OPEN">OPEN</option>
+
+                <option value="UNDER_REVIEW">UNDER REVIEW</option>
+
+                <option value="RESOLVED">RESOLVED</option>
+
+                <option value="CLOSED">CLOSED</option>
+              </select>
+            </div>
+          </section>
 
           {/* Conversation */}
-          <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden">
-            <div className="p-5 border-b border-slate-200 flex items-center gap-2">
-              <MessageIcon />
+          <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
+            <div className="flex items-center gap-3 border-b border-slate-200 p-5">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-100">
+                <ShieldCheck size={20} />
+              </div>
 
               <div>
                 <h2 className="font-bold text-slate-900">
@@ -249,27 +335,27 @@ const DisputeDetails = () => {
               </div>
             </div>
 
-            <div className="p-5 space-y-4 max-h-137.5 overflow-y-auto">
+            <div className="max-h-137.5 space-y-4 overflow-y-auto p-5">
               {messages.length === 0 && (
-                <p className="text-center text-slate-500 py-10">
+                <p className="py-10 text-center text-sm text-slate-500">
                   No messages yet.
                 </p>
               )}
 
               {messages.map((item) => {
+                const isAdmin = item.sender_role === "ADMIN";
+
                 const isMine =
                   Number(item.sender_id) === Number(currentUser.id);
-
-                const isAdmin = item.sender_role === "ADMIN";
 
                 if (isAdmin) {
                   return (
                     <div key={item.id} className="flex justify-center">
-                      <div className="max-w-2xl w-full bg-yellow-50 border border-yellow-200 rounded-2xl p-4">
-                        <div className="flex items-center gap-2 mb-2">
-                          <ShieldCheck size={17} className="text-yellow-700" />
+                      <div className="w-full max-w-2xl rounded-2xl border border-yellow-200 bg-yellow-50 p-4">
+                        <div className="mb-2 flex items-center gap-2">
+                          <ShieldCheck size={16} className="text-yellow-700" />
 
-                          <span className="font-semibold text-yellow-800">
+                          <span className="text-sm font-semibold text-yellow-800">
                             Admin
                           </span>
 
@@ -278,7 +364,7 @@ const DisputeDetails = () => {
                           </span>
                         </div>
 
-                        <p className="text-sm text-slate-700 whitespace-pre-wrap">
+                        <p className="whitespace-pre-wrap text-sm text-slate-700">
                           {item.message}
                         </p>
                       </div>
@@ -300,7 +386,7 @@ const DisputeDetails = () => {
                           : "bg-slate-100 text-slate-800"
                       }`}
                     >
-                      <div className="flex items-center gap-2 mb-2">
+                      <div className="mb-2 flex items-center gap-2">
                         <User size={15} />
 
                         <span className="text-xs font-semibold">
@@ -316,7 +402,7 @@ const DisputeDetails = () => {
                         </span>
                       </div>
 
-                      <p className="text-sm whitespace-pre-wrap">
+                      <p className="whitespace-pre-wrap text-sm">
                         {item.message}
                       </p>
                     </div>
@@ -335,41 +421,34 @@ const DisputeDetails = () => {
                   value={message}
                   onChange={(e) => setMessage(e.target.value)}
                   rows={4}
-                  placeholder="Write your reply..."
-                  className="w-full border border-slate-300 rounded-xl p-4 resize-none focus:outline-none focus:ring-2 focus:ring-slate-400"
+                  placeholder="Write an admin reply..."
+                  className="w-full resize-none rounded-xl border border-slate-300 p-4 text-sm outline-none focus:border-slate-500 focus:ring-2 focus:ring-slate-200"
                 />
 
-                <div className="flex justify-end mt-3">
+                <div className="mt-3 flex justify-end">
                   <button
                     type="submit"
                     disabled={sending || !message.trim()}
-                    className="flex items-center gap-2 px-5 py-2.5 bg-slate-900 text-white rounded-xl font-semibold disabled:opacity-50"
+                    className="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-5 py-2.5 font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     <Send size={17} />
 
-                    {sending ? "Sending..." : "Send Reply"}
+                    {sending ? "Sending..." : "Send Admin Reply"}
                   </button>
                 </div>
               </form>
             ) : (
-              <div className="border-t border-slate-200 p-5 text-center bg-slate-50">
+              <div className="border-t border-slate-200 bg-slate-50 p-5 text-center">
                 <p className="text-sm text-slate-500">
-                  This dispute has been closed. No further replies can be sent.
+                  This dispute is closed. No further replies can be sent.
                 </p>
               </div>
             )}
-          </div>
+          </section>
         </div>
       </div>
-    </DashboardLayout>
+    </AdminLayout>
   );
 };
 
-// Small component to avoid another lucide naming conflict
-const MessageIcon = () => (
-  <div className="w-9 h-9 rounded-lg bg-slate-100 flex items-center justify-center">
-    <Send size={17} className="text-slate-700" />
-  </div>
-);
-
-export default DisputeDetails;
+export default AdminDisputeDetails;

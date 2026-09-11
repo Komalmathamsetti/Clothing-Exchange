@@ -24,6 +24,7 @@ import AdminListings from "./pages/Admin/AdminListings";
 import AdminSwaps from "./pages/Admin/AdminSwaps";
 import AdminAnalytics from "./pages/Admin/AdminAnalytics";
 import AdminDisputes from "./pages/Admin/AdminDisputes";
+import AdminDisputeDetails from "./pages/Admin/AdminDisputeDetails";
 function App() {
   return (
     <BrowserRouter>
@@ -53,6 +54,7 @@ function App() {
         <Route path="/admin/swaps" element={<AdminSwaps/>}/>
         <Route path="/admin/analytics" element={<AdminAnalytics/>}/>
         <Route path="/admin/disputes" element={<AdminDisputes />}/>
+        <Route path= "/admin/disputes/:id" element={<AdminDisputeDetails/>}/>
 
       </Routes>
     </BrowserRouter>

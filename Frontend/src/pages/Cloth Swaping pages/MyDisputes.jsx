@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   MessageSquare,
@@ -20,34 +20,54 @@ const MyDisputes = () => {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [filter, setFilter] = useState("ALL");
+  useEffect(() => {
+    let cancelled = false;
 
-  const fetchDisputes = useCallback(async (showRefresh = false) => {
-    try {
-      if (showRefresh) {
-        setRefreshing(true);
-      } else {
-        setLoading(true);
+    const fetchInitialDisputes = async () => {
+      try {
+        const response = await getMyDisputes();
+
+        if (cancelled) return;
+
+        setDisputes(response.data.disputes || []);
+      } catch (error) {
+        if (cancelled) return;
+
+        console.error("GET MY DISPUTES ERROR:", error);
+
+        toast.error(error.response?.data?.message || "Failed to load disputes");
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
+        }
       }
+    };
+
+    fetchInitialDisputes();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+  const handleRefresh = async () => {
+    try {
+      setRefreshing(true);
 
       const response = await getMyDisputes();
 
       setDisputes(response.data.disputes || []);
-    } catch (error) {
-      console.error("GET MY DISPUTES ERROR:", error);
 
-      toast.error(error.response?.data?.message || "Failed to load disputes");
+      toast.success("Disputes refreshed");
+    } catch (error) {
+      console.error("REFRESH DISPUTES ERROR:", error);
+
+      toast.error(
+        error.response?.data?.message || "Failed to refresh disputes",
+      );
     } finally {
-      setLoading(false);
       setRefreshing(false);
     }
-  },[]);
-
-  useEffect(() => {
-    const loadDisputes = async()=>{
-        await fetchDisputes();
-    }
-    loadDisputes();
-  }, [fetchDisputes]);
+  };
 
   const getStatusStyle = (status) => {
     switch (status) {
@@ -107,7 +127,7 @@ const MyDisputes = () => {
             </div>
 
             <button
-              onClick={() => fetchDisputes(true)}
+              onClick={handleRefresh}
               disabled={refreshing}
               className="flex items-center justify-center gap-2 px-4 py-2 bg-white border border-slate-300 rounded-xl hover:bg-slate-50 disabled:opacity-50"
             >
