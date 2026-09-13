@@ -1,6 +1,6 @@
 import axios from "axios";
 const API = axios.create({
-    baseURL:"http://localhost:5000/api/swaps"
+    baseURL:`${import.meta.env.VITE_API_URL}/swaps`
 });
 API.interceptors.request.use((config)=>{
     const token = localStorage.getItem("token");
