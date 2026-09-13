@@ -147,7 +147,7 @@ export default function Login() {
                 <GoogleLogin
                   useOneTap={false}
                   ux_mode="redirect"
-                  login_uri="http://localhost:5000/api/auth/google-login"
+                  login_uri={`${import.meta.env.VITE_API_URL}/auth/google-login`}
                 />
               </div>
             </form>

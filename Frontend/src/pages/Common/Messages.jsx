@@ -35,7 +35,7 @@ export default function Messages() {
   const messagesEndRef = useRef(null);
   const socketRef = useRef(null);
   useEffect(()=>{
-    socketRef.current = io("http://localhost:5000");
+    socketRef.current = io(import.meta.env.VITE_SOCKET_URL);
     socketRef.current.on("connect",()=>{
         console.log("Socket connected:",socketRef.current.id);
     });

@@ -244,12 +244,12 @@ exports.googleLogin = async (req, res) => {
     );
 
     // Redirect back to React
-    const redirectUrl = `http://localhost:5173/google-success?token=${encodeURIComponent(token)}`;
+    const redirectUrl = `${process.env.FRONTEND_URL}/google-success?token=${encodeURIComponent(token)}`;
 
     return res.redirect(redirectUrl);
   } catch (error) {
     console.error("GOOGLE LOGIN ERROR:", error);
 
-    return res.redirect("http://localhost:5173/login?google_error=1");
+    return res.redirect(`${process.env.FRONTEND_URL}/login?google_error=1`);
   }
 };

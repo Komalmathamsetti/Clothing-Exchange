@@ -66,7 +66,7 @@ export default function Notifications() {
   useEffect(() => {
     if (!userId) return;
 
-    const socket = io("http://localhost:5000");
+    const socket = io(import.meta.env.VITE_SOCKET_URL);
 
     socket.emit("join_user", userId);
 
