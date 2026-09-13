@@ -20,7 +20,7 @@ export default function Navbar({ user }) {
       <div className="flex items-center gap-5">
         {/* Notification */}
         <Link
-          to="#"
+          to="/notifications"
           className="relative flex h-10 w-10 items-center justify-center text-xl"
         >
           🔔
