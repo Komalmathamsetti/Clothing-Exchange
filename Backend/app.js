@@ -5,6 +5,7 @@ const morgan = require("morgan");
 const cookieParser = require("cookie-parser");
 const userRoutes = require("./routes/userRoutes");
 const authRoutes = require("./routes/authRoutes");
+const homeRoutes = require("./routes/homeRoutes");
 const clothingRoutes = require("./routes/clothingRoutes");
 const swapRoutes = require("./routes/swapRoutes");
 const chatRoutes = require("./routes/chatRoutes");
@@ -13,25 +14,31 @@ const nearbyRoutes = require("./routes/nearbyRoutes");
 const valueRoutes = require("./routes/valueRoutes");
 const adminRoutes = require("./routes/adminRoutes");
 const disputeRoutes = require("./routes/disputeRoutes");
+const notificationRoutes = require("./routes/notificationRoutes");
+const reviewRoutes = require("./routes/reviewRoutes");
 const app = express();
 app.use(cors());
 app.use(helmet());
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
-app.use("/api/auth",authRoutes);
-app.use("/api/dashboard",dashboardRoutes);
-app.use("/api/users",userRoutes);
-app.use("/api/clothing",clothingRoutes);
-app.use("/api/swaps",swapRoutes);
-app.use("/api/chats",chatRoutes);
-app.use("/api/nearby",nearbyRoutes);
-app.use("/api/value-caluculator",valueRoutes);
-app.use("/api/admin",adminRoutes);
-app.use("/api/disputes",disputeRoutes);
-app.get("/",(req,res)=>{
-   res.status(200).json({
-    success:true,
-    message:"Clothing Exchange API is running"
-   });
+app.use("/api/auth", authRoutes);
+app.use("/api/dashboard", dashboardRoutes);
+app.use("/api/users", userRoutes);
+app.use("/api/home", homeRoutes);
+app.use("/api/notifications", notificationRoutes);
+app.use("/api/clothing", clothingRoutes);
+app.use("/api/swaps", swapRoutes);
+app.use("/api/chats", chatRoutes);
+app.use("/api/nearby", nearbyRoutes);
+app.use("/api/value-caluculator", valueRoutes);
+app.use("/api/admin", adminRoutes);
+app.use("/api/disputes", disputeRoutes);
+app.use("/api/reviews", reviewRoutes);
+app.get("/", (req, res) => {
+  res.status(200).json({
+    success: true,
+    message: "Clothing Exchange API is running",
+  });
 });
 module.exports = app;

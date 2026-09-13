@@ -1,33 +1,34 @@
 import { useState } from "react";
-import { Link,useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { loginUser } from "../../services/authServices";
 import toast from "react-hot-toast";
+import { GoogleLogin } from "@react-oauth/google";
 export default function Login() {
   const navigate = useNavigate();
-  const [formData,setFormData] = useState({
-    email:"",
-    password:""
+  const [formData, setFormData] = useState({
+    email: "",
+    password: "",
   });
-  const handleChange = (e)=>{
+  const handleChange = (e) => {
     setFormData({
       ...formData,
-      [e.target.name]:e.target.value,
+      [e.target.name]: e.target.value,
     });
   };
-  const handleSubmit = async(e)=>{
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    try{
+    try {
       const response = await loginUser(formData);
       toast.success(response.data.message);
-      const { token,user } = response.data
-      localStorage.setItem("token",token);
-      localStorage.setItem("user",JSON.stringify(response.data.user));
-      if(user.role === "ADMIN"){
+      const { token, user } = response.data;
+      localStorage.setItem("token", token);
+      localStorage.setItem("user", JSON.stringify(response.data.user));
+      if (user.role === "ADMIN") {
         navigate("/admin/dashboard");
-      }else{
+      } else {
         navigate("/dashboard");
       }
-    }catch(error){
+    } catch (error) {
       toast.error(error.response?.data?.message || "Login Failed");
     }
   };
@@ -142,13 +143,13 @@ export default function Login() {
                 <div className="h-px flex-1 bg-slate-200" />
               </div>
 
-              <button
-                type="button"
-                className="flex w-full items-center justify-center gap-3 rounded-xl border border-slate-200 px-5 py-4 font-bold text-slate-700 transition hover:border-slate-300 hover:bg-slate-50"
-              >
-                <span className="text-lg font-black text-blue-500">G</span>
-                Continue with Google
-              </button>
+              <div className="flex w-full justify-center">
+                <GoogleLogin
+                  useOneTap={false}
+                  ux_mode="redirect"
+                  login_uri="http://localhost:5000/api/auth/google-login"
+                />
+              </div>
             </form>
 
             <p className="mt-9 text-center text-sm text-slate-500">

@@ -1,4 +1,15 @@
 const pool = require("../config/db");
+const {
+  createNotification,
+  notifyAdmins,
+} = require("../services/notificationServices");
+
+const {
+  NEW_SWAP_REQUEST,
+  SWAP_ACCEPTED,
+  SWAP_REJECTED,
+  SWAP_CANCELLED,
+} = require("../constants/notificationTypes");
 exports.createSwapRequest = async (req, res) => {
   const client = await pool.connect();
 
@@ -151,7 +162,46 @@ exports.createSwapRequest = async (req, res) => {
       [swapRequest.id],
     );
     await client.query("COMMIT");
+    const senderUserResult = await pool.query(
+      `
+  SELECT full_name
+  FROM users
+  WHERE id = $1
+  `,
+      [senderId],
+    );
 
+    const senderName = senderUserResult.rows[0]?.full_name || "A user";
+
+    await createNotification({
+      userId: reciever_id,
+
+      type: NEW_SWAP_REQUEST,
+
+      title: "New Swap Request",
+
+      message: `${senderName} has sent you a new swap request.`,
+
+      referenceId: swapRequest.id,
+
+      referenceType: "SWAP_REQUEST",
+    });
+
+    // -----------------------------------------------------
+    // Notify admins
+    // -----------------------------------------------------
+
+    await notifyAdmins({
+      type: NEW_SWAP_REQUEST,
+
+      title: "New Swap Request",
+
+      message: `${senderName} has created a new swap request.`,
+
+      referenceId: swapRequest.id,
+
+      referenceType: "SWAP_REQUEST",
+    });
     return res.status(201).json({
       success: true,
       message: "Swap request sent successfully",
@@ -526,6 +576,19 @@ exports.acceptSwapRequest = async (req, res) => {
 
     await client.query("COMMIT");
 
+    // =====================================================
+    // NOTIFY SENDER
+    // =====================================================
+
+    await createNotification({
+      userId: request.sender_id,
+      type: SWAP_ACCEPTED,
+      title: "Swap Request Accepted",
+      message:
+        "Your swap request has been accepted. The exchange is now completed.",
+      referenceId: request.id,
+      referenceType: "SWAP_REQUEST",
+    });
     // ----------------------------------------
     // Send real-time status update
     // ----------------------------------------
@@ -570,7 +633,19 @@ exports.rejectSwapRequest = async (req, res) => {
   try {
     const recieverId = req.user.id;
     const requestId = req.params.id;
+    const requestResult = await pool.query(
+      `SELECT sender_id FROM swap_requests WHERE id = $1`,
+      [requestId],
+    );
 
+    if (requestResult.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: "Swap request not found",
+      });
+    }
+
+    const senderId = requestResult.rows[0].sender_id;
     const result = await pool.query(
       `
       UPDATE swap_requests
@@ -591,7 +666,14 @@ exports.rejectSwapRequest = async (req, res) => {
     }
 
     const updatedRequest = result.rows[0];
-
+    await createNotification({
+      userId: senderId,
+      type: SWAP_REJECTED,
+      title: "Swap Request Rejected",
+      message: "Your swap request has been rejected.",
+      referenceId: requestId,
+      referenceType: "SWAP_REQUEST",
+    });
     // ----------------------------------------
     // Send real-time status update
     // ----------------------------------------
@@ -688,6 +770,18 @@ exports.cancelSwapRequest = async (req, res) => {
     );
     await client.query("COMMIT");
 
+    // =====================================================
+    // NOTIFY RECEIVER
+    // =====================================================
+
+    await createNotification({
+      userId: request.reciever_id,
+      type: SWAP_CANCELLED,
+      title: "Swap Request Cancelled",
+      message: "A swap request you received has been cancelled.",
+      referenceId: request.id,
+      referenceType: "SWAP_REQUEST",
+    });
     const updatedRequest = updatedResult.rows[0];
 
     /*
@@ -695,16 +789,17 @@ exports.cancelSwapRequest = async (req, res) => {
      */
     const io = req.app.get("io");
 
-    io.to(`user_${updatedRequest.sender_id}`).emit("swap_status_updated", {
-      request_id: updatedRequest.id,
-      status: "CANCELLED",
-    });
+    if (io) {
+      io.to(`user_${updatedRequest.sender_id}`).emit("swap_status_updated", {
+        request_id: updatedRequest.id,
+        status: "CANCELLED",
+      });
 
-    io.to(`user_${updatedRequest.reciever_id}`).emit("swap_status_updated", {
-      request_id: updatedRequest.id,
-      status: "CANCELLED",
-    });
-
+      io.to(`user_${updatedRequest.reciever_id}`).emit("swap_status_updated", {
+        request_id: updatedRequest.id,
+        status: "CANCELLED",
+      });
+    }
     return res.status(200).json({
       success: true,
       message: "Swap request cancelled successfully",

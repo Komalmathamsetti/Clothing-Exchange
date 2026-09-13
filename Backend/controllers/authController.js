@@ -1,6 +1,9 @@
 const pool = require("../config/db");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
+const { OAuth2Client } = require("google-auth-library");
+
+const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 exports.registerUser = async (req, res) => {
   try {
     const { full_name, email, password, phone, role, city, state } = req.body;
@@ -132,26 +135,103 @@ exports.loginUser = async (req, res) => {
 };
 exports.googleLogin = async (req, res) => {
   try {
-    const { email } = req.body;
-    if (!email) {
-      return res.status(400).json({
-        success: false,
-        message: "Email is required",
-      });
+    const { credential } = req.body;
+
+    if (!credential) {
+      return res.status(400).send("Google credential is required");
     }
-    // Check if user exists
-    const existingUser = await pool.query(
-      "SELECT * FROM users WHERE email = $1",
-      [email],
-    );
-    if (existingUser.rows.length === 0) {
-      return res.status(404).json({
-        success: false,
-        message: "Account not found. Please register first.",
-      });
+
+    // Verify the Google ID token
+    const ticket = await googleClient.verifyIdToken({
+      idToken: credential,
+      audience: process.env.GOOGLE_CLIENT_ID,
+    });
+
+    const payload = ticket.getPayload();
+
+    if (!payload) {
+      return res.status(401).send("Invalid Google token");
     }
-    const user = existingUser.rows[0];
-    // Generate JWT
+
+    const { sub: googleId, email, email_verified, name, picture } = payload;
+
+    if (!email || !email_verified) {
+      return res.status(401).send("Google email is not verified");
+    }
+
+    let user;
+
+    // 1. Check whether Google account already exists
+    let result = await pool.query(`SELECT * FROM users WHERE google_id = $1`, [
+      googleId,
+    ]);
+
+    if (result.rows.length > 0) {
+      user = result.rows[0];
+    } else {
+      // 2. Check whether an account already exists with this email
+      result = await pool.query(`SELECT * FROM users WHERE email = $1`, [
+        email,
+      ]);
+
+      if (result.rows.length > 0) {
+        // Existing account → link Google
+        user = result.rows[0];
+
+        await pool.query(
+          `
+          UPDATE users
+          SET
+            google_id = $1,
+            auth_provider = 'google',
+            profile_image = COALESCE(profile_image, $2),
+            updated_at = CURRENT_TIMESTAMP
+          WHERE id = $3
+          `,
+          [googleId, picture || null, user.id],
+        );
+
+        user.google_id = googleId;
+        user.auth_provider = "google";
+
+        if (!user.profile_image && picture) {
+          user.profile_image = picture;
+        }
+      } else {
+        // 3. Create new Google user
+        const newUser = await pool.query(
+          `
+          INSERT INTO users
+          (
+            full_name,
+            email,
+            password,
+            role,
+            profile_image,
+            google_id,
+            auth_provider
+          )
+          VALUES
+          ($1, $2, NULL, 'USER', $3, $4, 'google')
+          RETURNING *
+          `,
+          [name || "Google User", email, picture || null, googleId],
+        );
+
+        user = newUser.rows[0];
+      }
+    }
+
+    // Account suspension check
+    if (!user.is_active) {
+      return res
+        .status(403)
+        .send(
+          "Your account has been suspended. Please contact the administrator.",
+        );
+    }
+
+    // Generate ClothSwap JWT
     const token = jwt.sign(
       {
         id: user.id,
@@ -159,26 +239,17 @@ exports.googleLogin = async (req, res) => {
       },
       process.env.JWT_SECRET,
       {
-        expiresIn: "1d",
+        expiresIn: "7d",
       },
     );
-    res.status(200).json({
-      success: true,
-      message: "Google Login Successful",
-      token,
-      user: {
-        id: user.id,
-        full_name: user.full_name,
-        email: user.email,
-        role: user.role,
-        profile_image: user.profile_image,
-      },
-    });
-  } catch (err) {
-    console.log(err);
-    res.status(500).json({
-      success: false,
-      message: "Internal Server Error",
-    });
+
+    // Redirect back to React
+    const redirectUrl = `http://localhost:5173/google-success?token=${encodeURIComponent(token)}`;
+
+    return res.redirect(redirectUrl);
+  } catch (error) {
+    console.error("GOOGLE LOGIN ERROR:", error);
+
+    return res.redirect("http://localhost:5173/login?google_error=1");
   }
 };

@@ -1,11 +1,14 @@
 const pool = require("../config/db");
+const {
+  createNotification,
+  notifyAdmins,
+} = require("../services/notificationServices");
 
-/*
-|--------------------------------------------------------------------------
-| CREATE DISPUTE
-|--------------------------------------------------------------------------
-| A swap participant can raise a dispute against the other participant.
-*/
+const {
+  DISPUTE_RAISED,
+  DISPUTE_STATUS_UPDATED,
+} = require("../constants/notificationTypes");
+
 exports.createDispute = async (req, res) => {
   const client = await pool.connect();
 
@@ -216,7 +219,37 @@ exports.createDispute = async (req, res) => {
     );
 
     await client.query("COMMIT");
+    // =====================================================
+    // NOTIFY USER + ADMINS ABOUT NEW DISPUTE
+    // =====================================================
 
+    const raisedByResult = await pool.query(
+      `
+  SELECT full_name
+  FROM users
+  WHERE id = $1
+  `,
+      [userId],
+    );
+
+    const raisedByName = raisedByResult.rows[0]?.full_name || "A user";
+
+    await createNotification({
+      userId: against_user,
+      type: DISPUTE_RAISED,
+      title: "New Dispute Raised",
+      message: `${raisedByName} has raised a dispute against you.`,
+      referenceId: dispute.id,
+      referenceType: "DISPUTE",
+    });
+
+    await notifyAdmins({
+      type: DISPUTE_RAISED,
+      title: "New Dispute Raised",
+      message: `${raisedByName} has raised a new dispute.`,
+      referenceId: dispute.id,
+      referenceType: "DISPUTE",
+    });
     return res.status(201).json({
       success: true,
       message: "Dispute created successfully",
@@ -705,6 +738,7 @@ exports.updateDisputeStatus = async (req, res) => {
     // ---------------------------------------------------------
     // 1. Validate status
     // ---------------------------------------------------------
+
     if (!allowedStatuses.includes(status)) {
       return res.status(400).json({
         success: false,
@@ -713,19 +747,24 @@ exports.updateDisputeStatus = async (req, res) => {
     }
 
     // ---------------------------------------------------------
-    // 2. Update status
+    // 2. Update dispute
     // ---------------------------------------------------------
+
     const result = await pool.query(
       `
-            UPDATE disputes
-            SET
-                status = $1,
-                updated_at = CURRENT_TIMESTAMP
-            WHERE id = $2
-            RETURNING *
-            `,
+      UPDATE disputes
+      SET
+        status = $1,
+        updated_at = CURRENT_TIMESTAMP
+      WHERE id = $2
+      RETURNING *
+      `,
       [status, id],
     );
+
+    // ---------------------------------------------------------
+    // 3. Check dispute exists
+    // ---------------------------------------------------------
 
     if (result.rows.length === 0) {
       return res.status(404).json({
@@ -734,10 +773,65 @@ exports.updateDisputeStatus = async (req, res) => {
       });
     }
 
+    const updatedDispute = result.rows[0];
+
+    // ---------------------------------------------------------
+    // 4. Get dispute participants
+    // ---------------------------------------------------------
+
+    const disputeUsersResult = await pool.query(
+      `
+      SELECT
+        raised_by,
+        against_user
+      FROM disputes
+      WHERE id = $1
+      `,
+      [id],
+    );
+
+    const disputeUsers = disputeUsersResult.rows[0];
+
+    // ---------------------------------------------------------
+    // 5. Notify participants
+    // ---------------------------------------------------------
+
+    if (disputeUsers) {
+      const notificationMessage = `Dispute #${id} status has been changed to ${updatedDispute.status}.`;
+
+      // Notify user who raised the dispute
+      await createNotification({
+        userId: disputeUsers.raised_by,
+        type: DISPUTE_STATUS_UPDATED,
+        title: "Dispute Status Updated",
+        message: notificationMessage,
+        referenceId: id,
+        referenceType: "DISPUTE",
+      });
+
+      // Notify the other participant
+      if (
+        Number(disputeUsers.against_user) !== Number(disputeUsers.raised_by)
+      ) {
+        await createNotification({
+          userId: disputeUsers.against_user,
+          type: DISPUTE_STATUS_UPDATED,
+          title: "Dispute Status Updated",
+          message: notificationMessage,
+          referenceId: id,
+          referenceType: "DISPUTE",
+        });
+      }
+    }
+
+    // ---------------------------------------------------------
+    // 6. Response
+    // ---------------------------------------------------------
+
     return res.status(200).json({
       success: true,
       message: "Dispute status updated successfully",
-      dispute: result.rows[0],
+      dispute: updatedDispute,
     });
   } catch (error) {
     console.error("UPDATE DISPUTE STATUS ERROR:", error);

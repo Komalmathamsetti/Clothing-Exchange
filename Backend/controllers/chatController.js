@@ -1,5 +1,7 @@
 const pool = require("../config/db");
+const { createNotification } = require("../services/notificationServices");
 
+const { NEW_MESSAGE } = require("../constants/notificationTypes");
 // =====================================================
 // CREATE CHAT
 // =====================================================
@@ -21,7 +23,7 @@ exports.createChat = async (req, res) => {
       FROM chats
       WHERE swap_request_id = $1
       `,
-      [swap_request_id]
+      [swap_request_id],
     );
 
     if (existingChat.rows.length > 0) {
@@ -38,7 +40,7 @@ exports.createChat = async (req, res) => {
       VALUES ($1)
       RETURNING *
       `,
-      [swap_request_id]
+      [swap_request_id],
     );
 
     res.status(201).json({
@@ -55,7 +57,6 @@ exports.createChat = async (req, res) => {
     });
   }
 };
-
 
 // =====================================================
 // GET MY CHATS
@@ -121,7 +122,7 @@ exports.getMyChats = async (req, res) => {
         c.created_at
       ) DESC
       `,
-      [userId]
+      [userId],
     );
     res.status(200).json({
       success: true,
@@ -159,7 +160,7 @@ exports.getChatMessages = async (req, res) => {
           OR sr.reciever_id = $2
         )
       `,
-      [chatId, userId]
+      [chatId, userId],
     );
 
     if (chatCheck.rows.length === 0) {
@@ -188,7 +189,7 @@ exports.getChatMessages = async (req, res) => {
 
       ORDER BY m.created_at ASC
       `,
-      [chatId]
+      [chatId],
     );
 
     res.status(200).json({
@@ -196,7 +197,6 @@ exports.getChatMessages = async (req, res) => {
       count: result.rows.length,
       messages: result.rows,
     });
-
   } catch (error) {
     console.error("GET CHAT MESSAGES ERROR:", error);
 
@@ -206,7 +206,6 @@ exports.getChatMessages = async (req, res) => {
     });
   }
 };
-
 
 // =====================================================
 // SEND MESSAGE
@@ -228,28 +227,35 @@ exports.sendMessage = async (req, res) => {
     // Check whether user belongs to this chat
     const chatCheck = await pool.query(
       `
-      SELECT c.id
-      FROM chats c
+  SELECT
+    c.id,
+    sr.sender_id,
+    sr.reciever_id
+  FROM chats c
 
-      INNER JOIN swap_requests sr
-        ON c.swap_request_id = sr.id
+  INNER JOIN swap_requests sr
+    ON c.swap_request_id = sr.id
 
-      WHERE c.id = $1
-        AND (
-          sr.sender_id = $2
-          OR sr.reciever_id = $2
-        )
-      `,
-      [chatId, senderId]
+  WHERE c.id = $1
+    AND (
+      sr.sender_id = $2
+      OR sr.reciever_id = $2
+    )
+  `,
+      [chatId, senderId],
     );
-
     if (chatCheck.rows.length === 0) {
       return res.status(403).json({
         success: false,
         message: "You are not part of this chat",
       });
     }
+    const chat = chatCheck.rows[0];
 
+    const receiverId =
+      Number(chat.sender_id) === Number(senderId)
+        ? chat.reciever_id
+        : chat.sender_id;
     const result = await pool.query(
       `
       INSERT INTO messages
@@ -261,24 +267,39 @@ exports.sendMessage = async (req, res) => {
       VALUES ($1, $2, $3)
       RETURNING *
       `,
-      [
-        chatId,
-        senderId,
-        message.trim(),
-      ]
+      [chatId, senderId, message.trim()],
     );
     const newMessage = result.rows[0];
     const io = req.app.get("io");
-    io.to(`chat_${chatId}`).emit(
-      "new_message",
-      newMessage
-    );
+    io.to(`chat_${chatId}`).emit("new_message", newMessage);
     res.status(201).json({
       success: true,
       message: "Message sent successfully",
       data: newMessage,
     });
+    // =====================================================
+    // NOTIFY OTHER CHAT PARTICIPANT
+    // =====================================================
 
+    const senderResult = await pool.query(
+      `
+  SELECT full_name
+  FROM users
+  WHERE id = $1
+  `,
+      [senderId],
+    );
+
+    const senderName = senderResult.rows[0]?.full_name || "A user";
+
+    await createNotification({
+      userId: receiverId,
+      type: NEW_MESSAGE,
+      title: "New Message",
+      message: `${senderName} sent you a new message.`,
+      referenceId: chatId,
+      referenceType: "CHAT",
+    });
   } catch (error) {
     console.error("SEND MESSAGE ERROR:", error);
 
@@ -319,7 +340,7 @@ exports.editMessage = async (req, res) => {
           OR sr.reciever_id = $2
         )
       `,
-      [messageId, userId]
+      [messageId, userId],
     );
 
     if (messageCheck.rows.length === 0) {
@@ -347,7 +368,7 @@ exports.editMessage = async (req, res) => {
       WHERE id = $2
       RETURNING *
       `,
-      [message.trim(), messageId]
+      [message.trim(), messageId],
     );
 
     const updatedMessage = result.rows[0];
@@ -357,7 +378,7 @@ exports.editMessage = async (req, res) => {
     if (io) {
       io.to(`chat_${existingMessage.chat_id}`).emit(
         "message_updated",
-        updatedMessage
+        updatedMessage,
       );
     }
 
@@ -366,7 +387,6 @@ exports.editMessage = async (req, res) => {
       message: "Message updated successfully",
       data: updatedMessage,
     });
-
   } catch (error) {
     console.error("EDIT MESSAGE ERROR:", error);
 
@@ -397,7 +417,7 @@ exports.deleteMessage = async (req, res) => {
           OR sr.reciever_id = $2
         )
       `,
-      [messageId, userId]
+      [messageId, userId],
     );
     if (messageCheck.rows.length === 0) {
       return res.status(404).json({
@@ -420,18 +440,15 @@ exports.deleteMessage = async (req, res) => {
       WHERE id = $1
       RETURNING *
       `,
-      [messageId]
+      [messageId],
     );
     const deletedMessage = result.rows[0];
     // Real-time delete notification
     const io = req.app.get("io");
-    io.to(`chat_${existingMessage.chat_id}`).emit(
-      "message_deleted",
-      {
-        id: deletedMessage.id,
-        chat_id: deletedMessage.chat_id,
-      }
-    );
+    io.to(`chat_${existingMessage.chat_id}`).emit("message_deleted", {
+      id: deletedMessage.id,
+      chat_id: deletedMessage.chat_id,
+    });
     res.status(200).json({
       success: true,
       message: "Message deleted successfully",

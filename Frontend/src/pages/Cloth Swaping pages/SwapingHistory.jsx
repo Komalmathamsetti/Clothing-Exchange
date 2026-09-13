@@ -9,13 +9,16 @@ import {
   MessageSquare,
   Package,
   RotateCcw,
+  Star,
   XCircle,
 } from "lucide-react";
+import ReviewModal from "../../components/ReviewModal";
 import toast from "react-hot-toast";
 import {
   getSentRequests,
   getRecievedRequests,
 } from "../../services/swapServices";
+import { checkReview } from "../../services/reviewServices";
 import DashboardLayout from "../../components/DashbaordLayout";
 const statusStyles = {
   ACCEPTED: "bg-emerald-50 text-emerald-700 ring-emerald-600/20",
@@ -73,6 +76,26 @@ function ClothingItem({ item }) {
 
 function SwapHistoryCard({ swap }) {
   const navigate = useNavigate();
+
+  const [showReviewModal, setShowReviewModal] = useState(false);
+  const [hasReviewed, setHasReviewed] = useState(false);
+  const [checkingReview, setCheckingReview] = useState(false);
+
+  const currentUserId = Number(
+    JSON.parse(localStorage.getItem("user") || "null")?.id,
+  );
+
+  const senderId = Number(swap.sender_id);
+
+  const senderName =
+    swap.sender_name || swap.sender?.name || "ClothSwap member";
+
+  const recieverName =
+    swap.reciever_name || swap.reciever?.name || "ClothSwap member";
+
+  const reviewedUserName =
+    currentUserId === senderId ? recieverName : senderName;
+
   const status = String(
     swap.status || swap.swap_status || "PENDING",
   ).toUpperCase();
@@ -80,11 +103,30 @@ function SwapHistoryCard({ swap }) {
   const statusClass =
     statusStyles[status] || "bg-slate-100 text-slate-600 ring-slate-500/20";
 
-  const senderName =
-    swap.sender_name || swap.sender?.name || "ClothSwap member";
+  // Check whether the current user has already reviewed this swap
+  useEffect(() => {
+    if (status !== "ACCEPTED" || !swap.id) {
+      return;
+    }
 
-  const recieverName =
-    swap.reciever_name || swap.reciever?.name || "ClothSwap member";
+    const loadReviewStatus = async () => {
+      try {
+        setCheckingReview(true);
+
+        const response = await checkReview(swap.id);
+
+        if (response.data?.success) {
+          setHasReviewed(response.data.reviewed === true);
+        }
+      } catch (error) {
+        console.error("CHECK REVIEW STATUS ERROR:", error);
+      } finally {
+        setCheckingReview(false);
+      }
+    };
+
+    loadReviewStatus();
+  }, [swap.id, status]);
 
   const offeredItem = {
     title: swap.sender_item_title,
@@ -99,11 +141,13 @@ function SwapHistoryCard({ swap }) {
     size: swap.reciever_item_size,
     condition: swap.reciever_item_condition,
   };
+
   const swapDate =
     swap.swap_date || swap.date || swap.created_at || swap.updated_at;
 
   return (
     <article className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm transition duration-200 hover:-translate-y-0.5 hover:border-emerald-200 hover:shadow-lg hover:shadow-emerald-950/5">
+      {/* Header */}
       <div className="border-b border-slate-100 p-5 sm:p-6">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div className="flex items-center gap-3">
@@ -115,6 +159,7 @@ function SwapHistoryCard({ swap }) {
               <p className="text-xs font-medium text-slate-400">
                 Swap participants
               </p>
+
               <h2 className="text-base font-bold text-slate-900">
                 {senderName}{" "}
                 <span className="font-normal text-slate-400">with</span>{" "}
@@ -129,10 +174,13 @@ function SwapHistoryCard({ swap }) {
             {status === "ACCEPTED" || status === "COMPLETED" ? (
               <CheckCircle2 size={14} />
             ) : null}
+
             {status === "REJECTED" || status === "CANCELLED" ? (
               <XCircle size={14} />
             ) : null}
+
             {status === "PENDING" ? <Clock3 size={14} /> : null}
+
             {formatStatus(status)}
           </span>
         </div>
@@ -140,6 +188,7 @@ function SwapHistoryCard({ swap }) {
         {swapDate ? (
           <div className="mt-4 inline-flex items-center gap-2 text-xs text-slate-400">
             <CalendarDays size={14} />
+
             <span>
               {new Date(swapDate).toLocaleDateString("en-IN", {
                 day: "numeric",
@@ -151,7 +200,9 @@ function SwapHistoryCard({ swap }) {
         ) : null}
       </div>
 
+      {/* Body */}
       <div className="space-y-4 p-5 sm:p-6">
+        {/* Clothing items */}
         <div className="flex flex-col gap-3 md:flex-row md:items-center">
           <ClothingItem item={offeredItem} />
 
@@ -161,16 +212,20 @@ function SwapHistoryCard({ swap }) {
 
           <ClothingItem item={requestedItem} />
         </div>
+
+        {/* Message */}
         {swap.message ? (
           <div className="flex gap-3 rounded-2xl bg-slate-50 p-4">
             <MessageSquare
               size={18}
               className="mt-0.5 shrink-0 text-emerald-600"
             />
+
             <div>
               <p className="mb-1 text-xs font-bold uppercase tracking-[0.12em] text-slate-400">
                 Message
               </p>
+
               <p className="text-sm leading-6 text-slate-600">{swap.message}</p>
             </div>
           </div>
@@ -180,8 +235,31 @@ function SwapHistoryCard({ swap }) {
             No message was added to this swap.
           </div>
         )}
+
+        {/* Successful swap actions */}
         {status === "ACCEPTED" && (
-          <div className="border-t border-slate-100 pt-4">
+          <div className="flex flex-wrap gap-3 border-t border-slate-100 pt-4">
+            {/* Review */}
+            {!checkingReview && !hasReviewed && (
+              <button
+                type="button"
+                onClick={() => setShowReviewModal(true)}
+                className="inline-flex items-center gap-2 rounded-xl bg-amber-50 px-4 py-2.5 text-sm font-bold text-amber-600 transition hover:bg-amber-100"
+              >
+                <Star size={16} className="fill-amber-400 text-amber-400" />
+                Rate {reviewedUserName}
+              </button>
+            )}
+
+            {/* Already reviewed */}
+            {hasReviewed && (
+              <div className="inline-flex items-center gap-2 rounded-xl bg-emerald-50 px-4 py-2.5 text-sm font-bold text-emerald-700">
+                <CheckCircle2 size={16} />
+                Review Submitted
+              </div>
+            )}
+
+            {/* Raise dispute */}
             <button
               type="button"
               onClick={() =>
@@ -199,10 +277,22 @@ function SwapHistoryCard({ swap }) {
           </div>
         )}
       </div>
+
+      {/* Review Modal */}
+      {showReviewModal && (
+        <ReviewModal
+          swap={swap}
+          reviewedUserName={reviewedUserName}
+          onClose={() => setShowReviewModal(false)}
+          onSubmitted={() => {
+            setHasReviewed(true);
+            setShowReviewModal(false);
+          }}
+        />
+      )}
     </article>
   );
 }
-
 export default function SwapHistory() {
   const [history, setHistory] = useState([]);
   const [activeFilter, setActiveFilter] = useState("all");

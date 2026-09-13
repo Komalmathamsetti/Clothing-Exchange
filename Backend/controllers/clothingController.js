@@ -1,4 +1,10 @@
 const pool = require("../config/db");
+const {
+  notifyAllActiveUsersExcept,
+  notifyAdmins,
+} = require("../services/notificationServices");
+
+const { NEW_LISTING } = require("../constants/notificationTypes");
 exports.createClothing = async (req, res) => {
   const client = await pool.connect();
 
@@ -90,7 +96,31 @@ exports.createClothing = async (req, res) => {
       }
     }
     await client.query("COMMIT");
+    await notifyAllActiveUsersExcept({
+      excludeUserId: ownerId,
 
+      type: NEW_LISTING,
+
+      title: "New Clothing Listing",
+
+      message: `A new clothing item "${clothing.title}" has been listed.`,
+
+      referenceId: clothing.id,
+
+      referenceType: "CLOTHING",
+    });
+
+    await notifyAdmins({
+      type: NEW_LISTING,
+
+      title: "New Clothing Listing",
+
+      message: `A new clothing item "${clothing.title}" was added.`,
+
+      referenceId: clothing.id,
+
+      referenceType: "CLOTHING",
+    });
     return res.status(201).json({
       success: true,
       message: "Clothing listing created successfully",

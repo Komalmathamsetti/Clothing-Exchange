@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { getHomeStats } from "../../services/homeServices";
+import { getLatestReviews } from "../../services/reviewServices";
 import Swal from "sweetalert2";
 const features = [
   {
@@ -42,30 +44,17 @@ const categories = [
   ["Accessories", "👜"],
 ];
 
-const testimonials = [
-  {
-    name: "Maya R.",
-    initials: "MR",
-    text: "ClothSwap completely changed how I shop. I found amazing pieces without spending a cent.",
-  },
-  {
-    name: "Jordan K.",
-    initials: "JK",
-    text: "It feels great knowing my old clothes are being loved instead of ending up in a landfill.",
-  },
-  {
-    name: "Sofia L.",
-    initials: "SL",
-    text: "The community is friendly, reliable, and full of unique fashion finds.",
-  },
-];
-
-function Stat({ value, label }) {
+function Stat({ value, label, loading = false }) {
   const [count, setCount] = useState(0);
 
   useEffect(() => {
+    if (loading) {
+      return;
+    }
+
     let current = 0;
-    const increment = Math.ceil(value / 60);
+
+    const increment = Math.max(1, Math.ceil(value / 60));
 
     const timer = setInterval(() => {
       current += increment;
@@ -79,18 +68,18 @@ function Stat({ value, label }) {
     }, 20);
 
     return () => clearInterval(timer);
-  }, [value]);
+  }, [value, loading]);
 
   return (
     <div className="text-center">
       <div className="text-4xl font-bold tracking-tight text-slate-900 sm:text-5xl">
-        {count.toLocaleString()}+
+        {loading ? "..." : `${count.toLocaleString()}+`}
       </div>
+
       <div className="mt-2 text-sm text-slate-500">{label}</div>
     </div>
   );
 }
-
 function ArrowIcon() {
   return (
     <svg
@@ -110,6 +99,52 @@ export default function Home() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
   const navigate = useNavigate();
+  const [homeStats, setHomeStats] = useState({
+    users: 0,
+    listings: 0,
+    successfulSwaps: 0,
+    cities: 0,
+  });
+
+  const [statsLoading, setStatsLoading] = useState(true);
+  const [latestReviews, setLatestReviews] = useState([]);
+  const [reviewsLoading, setReviewsLoading] = useState(true);
+  useEffect(() => {
+    const fetchHomeStats = async () => {
+      try {
+        const response = await getHomeStats();
+
+        if (response.data.success) {
+          setHomeStats(response.data.stats);
+        }
+      } catch (error) {
+        console.error("FETCH HOME STATS ERROR:", error);
+      } finally {
+        setStatsLoading(false);
+      }
+    };
+
+    fetchHomeStats();
+  }, []);
+  useEffect(() => {
+    const fetchLatestReviews = async () => {
+      try {
+        setReviewsLoading(true);
+
+        const response = await getLatestReviews();
+
+        if (response.data.success) {
+          setLatestReviews(response.data.reviews || []);
+        }
+      } catch (error) {
+        console.error("FETCH LATEST REVIEWS ERROR:", error);
+      } finally {
+        setReviewsLoading(false);
+      }
+    };
+
+    fetchLatestReviews();
+  }, []);
   const [user, setUser] = useState(() => {
     const storedUser = localStorage.getItem("user");
 
@@ -202,15 +237,19 @@ export default function Home() {
             >
               Browse Clothes
             </button>
-            <Link className="transition hover:text-emerald-500" to="#about">
+            <a
+              className="cursor-pointer transition hover:text-emerald-500"
+              href="#about"
+            >
               About
-            </Link>
-            <Link
-              className="transition hover:text-emerald-500"
-              to="#how-it-works"
+            </a>
+
+            <a
+              className="cursor-pointer transition hover:text-emerald-500"
+              href="#how-it-works"
             >
               How It Works
-            </Link>
+            </a>
           </div>
           <div className="hidden items-center gap-3 lg:flex">
             {!user ? (
@@ -287,12 +326,21 @@ export default function Home() {
               <button type="button" onClick={handleBrowseClothes}>
                 Browse Clothes
               </button>
-              <Link to="#about" onClick={() => setMenuOpen(false)}>
+              <a
+                href="#about"
+                onClick={() => setMenuOpen(false)}
+                className="cursor-pointer transition hover:text-emerald-500"
+              >
                 About
-              </Link>
-              <Link to="#how-it-works" onClick={() => setMenuOpen(false)}>
+              </a>
+
+              <a
+                href="#how-it-works"
+                onClick={() => setMenuOpen(false)}
+                className="cursor-pointer transition hover:text-emerald-500"
+              >
                 How It Works
-              </Link>
+              </a>
               {!user ? (
                 <>
                   <button
@@ -458,10 +506,11 @@ export default function Home() {
                 </span>
               </h2>
             </div>
-            <p className="max-w-md text-lg leading-8 text-slate-500">
-              Every swap is a small step toward a cleaner planet. Discover
-              clothes you love, meet like-minded people, and make fashion more
-              circular.
+            <p className="max-w-xl text-lg leading-8 text-slate-500">
+              ClothSwap is a community-driven clothing exchange marketplace
+              where you can give clothes you no longer wear a second life.
+              Discover unique pieces, connect with people in your community, and
+              exchange clothes without buying something new.
             </p>
           </div>
 
@@ -498,8 +547,10 @@ export default function Home() {
                   </span>
                 </h2>
               </div>
-              <p className="max-w-sm text-slate-500">
-                From closet to community in four easy steps.
+              <p className="max-w-md text-lg leading-7 text-slate-500">
+                Turn clothes you no longer wear into something new. List your
+                items, discover clothes from other members, request a swap, and
+                complete the exchange.
               </p>
             </div>
 
@@ -507,7 +558,7 @@ export default function Home() {
               {steps.map(([number, title, text]) => (
                 <article
                   key={number}
-                  className="border-t border-slate-300 pt-6"
+                  className="group relative rounded-3xl border border-slate-200 bg-white p-6 shadow-sm transition duration-300 hover:-translate-y-2 hover:border-emerald-200 hover:shadow-xl hover:shadow-emerald-900/10"
                 >
                   <span className="text-sm font-bold text-emerald-600">
                     {number}
@@ -568,52 +619,125 @@ export default function Home() {
 
         <section className="bg-emerald-500 px-6 py-20 text-white">
           <div className="mx-auto grid max-w-5xl grid-cols-2 gap-y-12 sm:grid-cols-4">
-            <Stat value={5000} label="Users" />
-            <Stat value={12000} label="Listings" />
-            <Stat value={4500} label="Successful Swaps" />
-            <Stat value={20} label="Cities" />
+            <Stat
+              value={homeStats.users}
+              label="Active Users"
+              loading={statsLoading}
+            />
+
+            <Stat
+              value={homeStats.listings}
+              label="Clothing Listings"
+              loading={statsLoading}
+            />
+
+            <Stat
+              value={homeStats.successfulSwaps}
+              label="Successful Swaps"
+              loading={statsLoading}
+            />
+
+            <Stat
+              value={homeStats.cities}
+              label="Cities"
+              loading={statsLoading}
+            />
           </div>
         </section>
 
-        <section className="mx-auto max-w-7xl px-6 py-24 lg:px-8">
-          <p className="mb-4 text-xs font-bold uppercase tracking-[0.2em] text-emerald-600">
-            Loved by the community
-          </p>
-          <h2 className="text-4xl font-bold tracking-tighter sm:text-6xl">
-            Real people.
-            <br />
-            <span className="font-serif italic text-emerald-500">
-              Real impact.
-            </span>
-          </h2>
+          <section className="mx-auto max-w-7xl px-6 py-24 lg:px-8">
+            <p className="mb-4 text-xs font-bold uppercase tracking-[0.2em] text-emerald-600">
+              Loved by the community
+            </p>
 
-          <div className="mt-14 grid gap-5 md:grid-cols-3">
-            {testimonials.map((review) => (
-              <article
-                key={review.name}
-                className="rounded-3xl border border-slate-200 bg-white p-7 shadow-sm"
-              >
-                <div className="text-lg tracking-widest text-amber-400">
-                  ★★★★★
-                </div>
-                <p className="mt-6 min-h-28 text-lg leading-8 text-slate-600">
-                  “{review.text}”
+            <h2 className="text-4xl font-bold tracking-tighter sm:text-6xl">
+              Real people.
+              <br />
+              <span className="font-serif italic text-emerald-500">
+                Real impact.
+              </span>
+            </h2>
+
+            {reviewsLoading ? (
+              <div className="mt-14 flex min-h-60 items-center justify-center rounded-3xl border border-slate-200 bg-slate-50">
+                <p className="text-sm text-slate-500">
+                  Loading community reviews...
                 </p>
-                <div className="mt-7 flex items-center gap-3">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-emerald-100 text-xs font-bold text-emerald-700">
-                    {review.initials}
-                  </div>
-                  <div>
-                    <strong className="block text-sm">{review.name}</strong>
-                    <span className="text-xs text-slate-500">
-                      Verified member
-                    </span>
-                  </div>
-                </div>
-              </article>
-            ))}
-          </div>
-        </section>
+              </div>
+            ) : latestReviews.length === 0 ? (
+              <div className="mt-14 rounded-3xl border border-dashed border-slate-300 bg-slate-50 px-6 py-16 text-center">
+                <div className="text-4xl">⭐</div>
+
+                <h3 className="mt-4 text-lg font-bold text-slate-900">
+                  No reviews yet
+                </h3>
+
+                <p className="mt-2 text-sm text-slate-500">
+                  Complete a successful swap and leave a review.
+                </p>
+              </div>
+            ) : (
+              <div className="mt-14 grid gap-5 md:grid-cols-3">
+                {latestReviews.map((review) => (
+                  <article
+                    key={review.id}
+                    className="rounded-3xl border border-slate-200 bg-white p-7 shadow-sm transition duration-300 hover:-translate-y-1 hover:border-emerald-200 hover:shadow-lg"
+                  >
+                    {/* Rating */}
+
+                    <div className="flex items-center gap-1 text-lg tracking-widest text-amber-400">
+                      {[1, 2, 3, 4, 5].map((star) => (
+                        <span
+                          key={star}
+                          className={
+                            star <= Number(review.rating)
+                              ? "text-amber-400"
+                              : "text-slate-200"
+                          }
+                        >
+                          ★
+                        </span>
+                      ))}
+                    </div>
+
+                    {/* Review */}
+
+                    <p className="mt-6 min-h-28 text-lg leading-8 text-slate-600">
+                      “{review.comment || "Great experience with ClothSwap!"}”
+                    </p>
+
+                    {/* Reviewer */}
+
+                    <div className="mt-7 flex items-center gap-3">
+                      {/* Profile Image */}
+
+                      <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full bg-emerald-100 text-xs font-bold text-emerald-700">
+                        {review.reviewer_image ? (
+                          <img
+                            src={review.reviewer_image}
+                            alt={review.reviewer_name}
+                            className="h-full w-full object-cover"
+                          />
+                        ) : (
+                          review.reviewer_name?.charAt(0)?.toUpperCase() || "U"
+                        )}
+                      </div>
+
+                      <div>
+                        <strong className="block text-sm text-slate-900">
+                          {review.reviewer_name}
+                        </strong>
+
+                        <span className="text-xs text-slate-500">
+                          Verified member
+                        </span>
+                      </div>
+                    </div>
+                  </article>
+                ))}
+              </div>
+            )}
+          </section>
 
         <section className="mx-6 mb-24 overflow-hidden rounded-4xl bg-linear-to-r from-emerald-50 via-white to-slate-100 px-8 py-20 sm:px-16 lg:mx-auto lg:max-w-7xl lg:px-24">
           <div className="grid items-center gap-12 lg:grid-cols-[1fr_auto]">
@@ -679,28 +803,36 @@ export default function Home() {
           </div>
 
           <div>
-            <h3 className="font-bold text-slate-900">Quick Links</h3>
-            <div className="mt-5 flex flex-col gap-3 text-sm text-slate-500">
-              <button
-                type="button"
-                onClick={handleBrowseClothes}
-                className="transition hover:text-emerald-600"
-              >
-                Browse Clothes
-              </button>
-              <Link
-                className="transition hover:text-emerald-600"
-                to="/how-it-works"
-              >
-                How It Works
-              </Link>
-              <Link className="transition hover:text-emerald-600" to="/about">
-                About Us
-              </Link>
-              <Link className="transition hover:text-emerald-600" to="/">
-                Sustainability
-              </Link>
-            </div>
+            <h3 className="text-lg font-bold text-slate-900">Quick Links</h3>
+
+            <ul className="mt-6 space-y-4 text-left">
+              <li>
+                <Link
+                  to="/browse"
+                  className="text-slate-500 transition hover:text-emerald-500"
+                >
+                  Browse Clothes
+                </Link>
+              </li>
+
+              <li>
+                <Link
+                  to="/how-it-works"
+                  className="text-slate-500 transition hover:text-emerald-500"
+                >
+                  How It Works
+                </Link>
+              </li>
+
+              <li>
+                <Link
+                  to="/about"
+                  className="text-slate-500 transition hover:text-emerald-500"
+                >
+                  About Us
+                </Link>
+              </li>
+            </ul>
           </div>
 
           <div>
@@ -724,10 +856,7 @@ export default function Home() {
                 Instagram ↗
               </a>
               <a className="transition hover:text-emerald-600" href="#home">
-                TikTok ↗
-              </a>
-              <a className="transition hover:text-emerald-600" href="#home">
-                Pinterest ↗
+                Facebook ↗
               </a>
             </div>
           </div>

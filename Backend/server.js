@@ -12,6 +12,7 @@ const io = new Server(server, {
   },
 });
 app.set("io", io);
+global.io = io;
 io.on("connection", (socket) => {
   // ----------------------------------------
   // Join user's personal room
