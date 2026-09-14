@@ -143,6 +143,9 @@ function FilterBar() {
 function ListingCard({ item }) {
   const navigate = useNavigate();
   const isAvailable = String(item.status || "").toUpperCase() === "AVAILABLE";
+  const imageUrl = Array.isArray(item.images)
+    ? item.images[0]
+    : item.image || null;
   const condition = String(item.clothing_condition || "Not Specified")
     .replace(/_/g, " ")
     .toLowerCase()
@@ -150,12 +153,15 @@ function ListingCard({ item }) {
   return (
     <article className="group flex flex-col overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-xl">
       <div className="relative m-3 overflow-hidden rounded-2xl bg-slate-100">
-        {item.image ? (
+        {imageUrl ? (
           <img
-            src={item.image}
+            src={imageUrl}
             alt={item.title}
             loading="lazy"
             className="aspect-4/3 w-full object-cover transition-transform duration-500 group-hover:scale-105"
+            onError={(e) => {
+              e.currentTarget.style.display = "none";
+            }}
           />
         ) : (
           <div className="flex aspect-4/3 w-full items-center justify-center bg-emerald-50 text-emerald-400">
