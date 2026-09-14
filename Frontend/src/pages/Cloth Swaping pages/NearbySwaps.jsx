@@ -148,6 +148,8 @@ function ListingCard({ item }) {
     : typeof item.images === "string"
       ? item.images
       : item.image_url || item.image || null;
+      console.log("NEARBY ITEM:", item);
+console.log("IMAGE URL:", imageUrl);
   const condition = String(item.clothing_condition || "Not Specified")
     .replace(/_/g, " ")
     .toLowerCase()
