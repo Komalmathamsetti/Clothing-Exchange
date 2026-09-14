@@ -145,7 +145,9 @@ function ListingCard({ item }) {
   const isAvailable = String(item.status || "").toUpperCase() === "AVAILABLE";
   const imageUrl = Array.isArray(item.images)
     ? item.images[0]
-    : item.image || null;
+    : typeof item.images === "string"
+      ? item.images
+      : item.image_url || item.image || null;
   const condition = String(item.clothing_condition || "Not Specified")
     .replace(/_/g, " ")
     .toLowerCase()
