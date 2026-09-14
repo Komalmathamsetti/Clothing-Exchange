@@ -1,90 +1,114 @@
-ClothSwap — Clothing Exchange & Swap Marketplace
+# ClothSwap — Clothing Exchange & Swap Marketplace
 
-ClothSwap is a full-stack web application that provides a dedicated platform for users to list, discover, exchange, and manage pre-owned clothing. The platform simplifies clothing exchange through structured listings, swap requests, real-time communication, notifications, reviews, disputes, and administrative management.
+ClothSwap is a full-stack web application that provides a dedicated platform for users to **list, discover, exchange, and manage pre-owned clothing**. The platform simplifies clothing exchange through structured listings, swap requests, real-time communication, notifications, reviews, disputes, and administrative management.
 
-✨ Features
-👤 User Authentication & Profile
-User registration and login
-JWT-based authentication
-Google Sign-In
-Role-based authorization
-User profile management
-Profile picture upload
-Password change
-Account management
-Dashboard statistics
-👕 Clothing Management
-Create clothing listings
-Add detailed clothing information
-Upload multiple clothing images
-Cloud-based image storage using Cloudinary
-Edit own listings
-Manage listing availability
-View detailed clothing information
-🔎 Clothing Discovery
-Browse available clothing
-Category-based filtering
-City-based clothing search
-Optional state-based filtering
-Case-insensitive location matching
-Users' own listings are excluded from location results
+---
 
-Note: The current location feature uses city and state filtering. It does not perform GPS distance or radius calculations.
+## ✨ Features
 
-💰 Clothing Value Calculator
-Provides an estimated value for clothing items
-Helps users compare items during potential exchanges
-🔄 Swap Management
-Send swap requests
-Receive incoming swap requests
-Accept swap requests
-Reject swap requests
-Cancel applicable requests
-View swap history
-Track swap status
-💬 Real-Time Chat
-Chat between swap participants
-Persistent message storage
-Real-time message delivery
-Socket.IO integration
-Authorized access to swap conversations
-🔔 Notifications
+### 👤 User Authentication & Profile
+
+- User registration and login
+- JWT-based authentication
+- Google Sign-In
+- Role-based authorization
+- User profile management
+- Profile picture upload
+- Password change
+- Account management
+- Dashboard statistics
+
+### 👕 Clothing Management
+
+- Create clothing listings
+- Add detailed clothing information
+- Upload multiple clothing images
+- Cloud-based image storage using Cloudinary
+- Edit own listings
+- Manage listing availability
+- View detailed clothing information
+
+### 🔎 Clothing Discovery
+
+- Browse available clothing
+- Category-based filtering
+- City-based clothing search
+- Optional state-based filtering
+- Case-insensitive location matching
+- Exclude the current user's own listings from location results
+
+> **Note:** The current location feature uses **city and state filtering**. It does not perform GPS distance or radius calculations.
+
+### 💰 Clothing Value Calculator
+
+- Provides an estimated value for clothing items
+- Helps users compare items during potential exchanges
+
+### 🔄 Swap Management
+
+- Send swap requests
+- Receive incoming swap requests
+- Accept swap requests
+- Reject swap requests
+- Cancel applicable requests
+- View swap history
+- Track swap status
+
+### 💬 Real-Time Chat
+
+- Chat between swap participants
+- Persistent message storage
+- Real-time message delivery
+- Socket.IO integration
+- Authorized access to swap conversations
+
+### 🔔 Notifications
 
 Notifications are generated for important events such as:
 
-New clothing listings
-New swap requests
-Accepted swaps
-Rejected swaps
-Cancelled swaps
-New messages
-Raised disputes
-Dispute status updates
-Administrative announcements
-⭐ Reviews & Ratings
-Rate eligible swap participants
-Add review comments
-View received reviews
-View submitted reviews
-Prevent duplicate reviews for the same swap
-Automatic average-rating calculation
-Display latest reviews
-⚠️ Dispute Management
-Raise disputes related to swaps
-Add dispute descriptions
-Add dispute messages
-Track dispute status
-Administrator dispute management
-🛡️ Admin Dashboard
+- New clothing listings
+- New swap requests
+- Accepted swaps
+- Rejected swaps
+- Cancelled swaps
+- New messages
+- Raised disputes
+- Dispute status updates
+- Administrative announcements
+
+### ⭐ Reviews & Ratings
+
+- Rate eligible swap participants
+- Add review comments
+- View received reviews
+- View submitted reviews
+- Prevent duplicate reviews for the same swap
+- Automatic average-rating calculation
+- Display latest reviews
+
+### ⚠️ Dispute Management
+
+- Raise disputes related to swaps
+- Add dispute descriptions
+- Add dispute messages
+- Track dispute status
+- Administrator dispute management
+
+### 🛡️ Admin Dashboard
 
 Administrators can manage and monitor:
 
-Users
-Clothing listings
-Swaps
-Disputes
-Platform statistics and analytics
-🏗️ Project Architecture
+- Users
+- Clothing listings
+- Swaps
+- Disputes
+- Platform statistics and analytics
+
+---
+
+## 🏗️ Project Architecture
+
+```text
 ClothSwap
 │
 ├── Frontend
@@ -102,7 +126,7 @@ ClothSwap
     ├── bcrypt
     ├── Cloudinary
     └── Socket.IO
-Application Flow
+APPLICATION FLOW
                     ┌─────────────────────┐
                     │   React Frontend    │
                     │                     │
@@ -134,7 +158,7 @@ Application Flow
      │ Disputes        │
      │ Notifications   │
      └─────────────────┘
-🛠️ Technology Stack
+Technology Stack
 Technology	Purpose
 React.js	Frontend development
 React Router	Client-side routing
@@ -199,7 +223,10 @@ cd clothswap
 cd Backend
 npm install
 3. Install Frontend Dependencies
-cd ../Frontend
+
+Open another terminal:
+
+cd Frontend
 npm install
 🔐 Environment Variables
 Backend
@@ -227,13 +254,13 @@ Create a .env file inside the Frontend directory:
 VITE_API_URL=http://localhost:5000/api
 VITE_GOOGLE_CLIENT_ID=your_google_client_id
 
-Never commit .env files or secret credentials to GitHub.
+Important: Never commit .env files or secret credentials to GitHub.
 
 🗄️ Database Setup
 
-ClothSwap uses PostgreSQL.
+ClothSwap uses PostgreSQL as its relational database.
 
-The database contains tables for:
+The main database tables are:
 
 users
 categories
@@ -247,28 +274,25 @@ disputes
 dispute_messages
 notifications
 
-Make sure the PostgreSQL database is running and the DATABASE_URL
-points to the correct database before starting the backend.
+Make sure the PostgreSQL database is configured correctly and the
+DATABASE_URL points to the required database.
 
 ▶️ Running the Application
-Start Backend
-
-Open a terminal:
-
+Start the Backend
 cd Backend
 npm start
 
-The backend will run on:
+The backend runs on:
 
 http://localhost:5000
-Start Frontend
+Start the Frontend
 
 Open another terminal:
 
 cd Frontend
 npm run dev
 
-The frontend will run on:
+The frontend runs on:
 
 http://localhost:5173
 🔄 Main User Workflow
@@ -323,7 +347,7 @@ CORS configuration
 HTTP security middleware
 🧪 Testing
 
-The project should be tested across the following areas:
+The application should be tested across the following areas.
 
 Authentication
 Valid registration
@@ -333,6 +357,12 @@ Invalid credentials
 Invalid JWT
 Google authentication
 Unauthorized admin access
+Profile
+View profile
+Update profile
+Upload profile image
+Change password
+Invalid profile data
 Clothing
 Create listing
 Edit listing
@@ -340,20 +370,21 @@ Multiple image upload
 Invalid image upload
 Category filtering
 Clothing details
+Listing availability
 Location
 City filtering
-City + state filtering
+City and state filtering
 Case-insensitive matching
 Different city
 Different state
 Empty search results
 Exclusion of own listings
 Swaps
-Create request
+Create swap request
 Accept request
 Reject request
-Cancel request
-Unauthorized request operations
+Cancel applicable request
+Unauthorized swap operations
 Swap history
 Chat
 Open authorized chat
@@ -374,6 +405,7 @@ Add dispute message
 Unauthorized access
 Admin status update
 Notifications
+New listing notification
 New swap notification
 Swap status notification
 Message notification
@@ -400,31 +432,33 @@ for people to exchange clothing instead of leaving usable garments
 unused or discarding them.
 
 The project combines sustainability with modern full-stack web
-development to create a practical peer-to-peer exchange platform.
+development to create a practical peer-to-peer clothing exchange
+platform.
 
 👩‍💻 Development Highlights
 
 This project demonstrates practical experience with:
 
 Full-stack application development
-REST API design
+REST API development
 React component development
 PostgreSQL database design
 Authentication and authorization
-Cloud services
+Google authentication
+Cloud image storage
 Real-time WebSocket communication
 File uploads
-Location-based filtering
-Transaction workflows
+City/state based location filtering
+Swap transaction workflows
 Notification systems
 Reviews and ratings
 Dispute management
 Admin dashboards
-Git-based development
+Git and GitHub
 📄 License
 
 This project was developed as an academic/project implementation.
 
 ⭐ ClothSwap
 
-ClothSwap — Exchange. Reuse. Sustain.
+Exchange. Reuse. Sustain.
